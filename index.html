@@ -551,10 +551,9 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
 </div>
 
 <script>
-// ── YOUR API KEY ──────────────────────────────
-var API_KEY = "CONFIDY_API_KEY";
-// ─────────────────────────────────────────────
-
+// ── API handled by Netlify function ──
+var API_KEY = null;
+// ────────────────────────────────────
 var userName = "", userGender = "", currentMode = "", currentSc = "approach";
 var chatHistory = [], msgCount = 0, confScore = 20, busy = false, scCount = 1;
 
