@@ -702,15 +702,10 @@ function buildPrompt() {
 // ── API ──
 async function callAI(msg) {
   chatHistory.push({ role: "user", content: msg });
-  var resp = await fetch("https://api.anthropic.com/v1/messages", {
+  var resp = await fetch("/api/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": API_KEY,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: buildPrompt(), messages: chatHistory })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: chatHistory, system: buildPrompt() })
   });
   if (!resp.ok) {
     var e = await resp.json().catch(function() { return {}; });
