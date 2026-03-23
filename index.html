@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confidy — Own Every Room</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #C9A84C; --gold-light: #E8C96A; --gold-dim: rgba(201,168,76,0.15);
+  --cream: #F0E8D5; --dark: #080808; --charcoal: #141414; --panel: #111111;
+  --border: rgba(255,255,255,0.07); --muted: #666; --mid: #999;
+  --green: #4CAF7D; --red: #E05C5C; --blue: #4F9BB8;
+}
+html, body { height: 100%; overflow: hidden; }
+body { background: var(--dark); color: var(--cream); font-family: "DM Sans", sans-serif; font-weight: 300; }
+
+/* ═══════════════════════════════
+   SCREEN SYSTEM
+═══════════════════════════════ */
+.screen { position: fixed; inset: 0; transition: opacity 0.6s, transform 0.6s; }
+.screen.hidden { opacity: 0; transform: scale(0.98); pointer-events: none; }
+
+/* ═══════════════════════════════
+   SCREEN 1 — LANDING PAGE
+═══════════════════════════════ */
+#landing { overflow-y: auto; background: var(--dark); }
+
+/* NAV */
+.nav { position: sticky; top: 0; z-index: 10; padding: 1.5rem 4rem; display: flex; align-items: center; justify-content: space-between; background: rgba(8,8,8,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.nav-logo { font-family: "Bebas Neue", sans-serif; font-size: 2rem; letter-spacing: 0.15em; color: var(--gold); text-decoration: none; }
+.nav-logo span { color: var(--cream); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { color: var(--mid); text-decoration: none; font-size: 0.82rem; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.3s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-cta { background: var(--gold); color: var(--dark) !important; padding: 0.6rem 1.5rem; border-radius: 4px; font-weight: 500 !important; }
+.nav-cta:hover { background: var(--gold-light) !important; }
+
+/* HERO */
+.hero { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+.hero-left { display: flex; flex-direction: column; justify-content: center; padding: 8rem 4rem 6rem; }
+.hero-eyebrow { font-size: 0.68rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+.hero-eyebrow::before { content: ""; display: block; width: 2rem; height: 1px; background: var(--gold); }
+.hero h1 { font-family: "Cormorant Garamond", serif; font-size: clamp(3.5rem, 6vw, 7rem); font-weight: 300; line-height: 0.92; margin-bottom: 2rem; }
+.hero h1 em { font-style: italic; color: var(--gold); display: block; }
+.hero-desc { font-size: 1rem; line-height: 1.8; color: var(--muted); max-width: 420px; margin-bottom: 3rem; }
+.hero-btns { display: flex; gap: 1rem; align-items: center; }
+.btn-gold { background: var(--gold); color: var(--dark); padding: 1rem 2.5rem; border: none; font-family: "DM Sans", sans-serif; font-size: 0.85rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; border-radius: 4px; transition: all 0.3s; }
+.btn-gold:hover { background: var(--gold-light); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(201,168,76,0.3); }
+.btn-ghost-link { color: var(--cream); text-decoration: none; font-size: 0.85rem; opacity: 0.6; transition: opacity 0.3s; cursor: pointer; background: none; border: none; font-family: "DM Sans", sans-serif; }
+.btn-ghost-link:hover { opacity: 1; }
+.hero-right { position: relative; background: linear-gradient(135deg, #0D0A00 0%, #080808 60%, #000D0D 100%); display: flex; align-items: center; justify-content: center; }
+.hero-chat-card { width: 300px; background: rgba(255,255,255,0.03); border: 1px solid rgba(201,168,76,0.2); border-radius: 20px; padding: 2rem; backdrop-filter: blur(20px); }
+.hcc-label { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; }
+.hcc-bubble { padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.8rem; line-height: 1.5; margin-bottom: 0.6rem; }
+.hcc-bubble.ai { background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.15); border-radius: 12px 12px 12px 2px; }
+.hcc-bubble.user { background: rgba(79,155,184,0.1); border: 1px solid rgba(79,155,184,0.2); border-radius: 12px 12px 2px 12px; color: #9DD4E8; }
+.hcc-status { font-size: 0.62rem; color: var(--gold); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.75rem; }
+.hcc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* HERO STATS */
+.hero-stats { padding: 3rem 4rem; display: flex; gap: 4rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.stat-num { font-family: "Bebas Neue", sans-serif; font-size: 3rem; color: var(--gold); line-height: 1; }
+.stat-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.2rem; }
+
+/* GENDER SECTION */
+.gender-section { display: grid; grid-template-columns: 1fr 1fr; }
+.gender-card { padding: 5rem 4rem; position: relative; overflow: hidden; }
+.gender-card.male { background: linear-gradient(135deg, #060D14 0%, #080808 100%); }
+.gender-card.female { background: linear-gradient(135deg, #0D060D 0%, #080808 100%); border-left: 1px solid var(--border); }
+.g-tag { font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem; }
+.gender-card.male .g-tag { color: var(--blue); }
+.gender-card.female .g-tag { color: #BB6F99; }
+.gender-card h2 { font-family: "Cormorant Garamond", serif; font-size: 2.8rem; font-weight: 300; margin-bottom: 1.5rem; line-height: 1.1; }
+.gender-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.8; max-width: 360px; }
+.gender-big-letter { font-family: "Bebas Neue", sans-serif; font-size: 16rem; position: absolute; right: -2rem; bottom: -3rem; opacity: 0.025; line-height: 1; pointer-events: none; }
+
+/* PHASES */
+.phases { padding: 8rem 4rem; }
+.section-header { text-align: center; margin-bottom: 5rem; }
+.section-eyebrow { font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+.section-eyebrow::before, .section-eyebrow::after { content: ""; display: block; width: 3rem; height: 1px; background: var(--gold); opacity: 0.4; }
+.section-header h2 { font-family: "Cormorant Garamond", serif; font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 300; }
+.phases-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+.phase-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 4px; padding: 3rem 2rem; transition: all 0.4s; }
+.phase-card:hover { background: rgba(255,255,255,0.04); transform: translateY(-8px); }
+.phase-card:nth-child(1) { border-top: 2px solid var(--gold); }
+.phase-card:nth-child(2) { border-top: 2px solid #8B6FBB; }
+.phase-card:nth-child(3) { border-top: 2px solid var(--blue); }
+.phase-icon { font-size: 2.5rem; margin-bottom: 1.5rem; }
+.phase-num { font-family: "Bebas Neue", sans-serif; font-size: 0.8rem; letter-spacing: 0.2em; margin-bottom: 1rem; }
+.phase-card:nth-child(1) .phase-num { color: var(--gold); }
+.phase-card:nth-child(2) .phase-num { color: #8B6FBB; }
+.phase-card:nth-child(3) .phase-num { color: var(--blue); }
+.phase-card h3 { font-family: "Cormorant Garamond", serif; font-size: 1.8rem; font-weight: 300; margin-bottom: 0.75rem; line-height: 1.2; }
+.phase-card p { color: var(--muted); font-size: 0.85rem; line-height: 1.8; margin-bottom: 1.5rem; }
+.phase-features { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.phase-features li { font-size: 0.78rem; color: var(--cream); display: flex; align-items: flex-start; gap: 0.6rem; opacity: 0.8; }
+.phase-features li::before { content: ""; display: block; width: 4px; height: 4px; border-radius: 50%; margin-top: 0.4rem; flex-shrink: 0; }
+.phase-card:nth-child(1) .phase-features li::before { background: var(--gold); }
+.phase-card:nth-child(2) .phase-features li::before { background: #8B6FBB; }
+.phase-card:nth-child(3) .phase-features li::before { background: var(--blue); }
+
+/* CTA SECTION */
+.cta-section { padding: 10rem 4rem; text-align: center; position: relative; overflow: hidden; }
+.cta-section::before { content: ""; position: absolute; width: 800px; height: 800px; border-radius: 50%; background: radial-gradient(ellipse, rgba(201,168,76,0.05) 0%, transparent 70%); left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.cta-section h2 { font-family: "Cormorant Garamond", serif; font-size: clamp(3rem, 7vw, 7rem); font-weight: 300; line-height: 0.95; margin-bottom: 2rem; position: relative; }
+.cta-section h2 em { font-style: italic; color: var(--gold); }
+.cta-section p { color: var(--muted); font-size: 1rem; max-width: 480px; margin: 0 auto 3rem; line-height: 1.7; position: relative; }
+.cta-btns { display: flex; gap: 1rem; justify-content: center; position: relative; }
+
+/* FOOTER */
+.footer { padding: 3rem 4rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.footer-logo { font-family: "Bebas Neue", sans-serif; font-size: 1.4rem; letter-spacing: 0.15em; color: var(--gold); }
+.footer-logo span { color: var(--cream); }
+.footer p { font-size: 0.75rem; color: var(--muted); }
+
+/* ═══════════════════════════════
+   SCREEN 2 — ONBOARDING
+═══════════════════════════════ */
+#onboarding { display: flex; align-items: center; justify-content: center; flex-direction: column; background: var(--dark); }
+.ob-logo { font-family: "Bebas Neue", sans-serif; font-size: 2.5rem; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 0.4rem; }
+.ob-logo span { color: var(--cream); }
+.ob-sub { font-size: 0.68rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin-bottom: 3rem; }
+.ob-card { background: var(--charcoal); border: 1px solid var(--border); border-radius: 20px; padding: 3rem; width: 480px; max-width: 95vw; }
+.ob-card h2 { font-family: "Cormorant Garamond", serif; font-size: 1.9rem; font-weight: 300; margin-bottom: 0.4rem; }
+.ob-card h2 em { font-style: italic; color: var(--gold); }
+.ob-card > p { color: var(--muted); font-size: 0.83rem; line-height: 1.7; margin-bottom: 2rem; margin-top: 0.3rem; }
+.ob-step { margin-bottom: 1.5rem; }
+.ob-label { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; }
+.ob-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1.1rem; color: var(--cream); font-family: "DM Sans", sans-serif; font-size: 0.92rem; outline: none; transition: border-color 0.3s; }
+.ob-input:focus { border-color: rgba(201,168,76,0.5); }
+.ob-input::placeholder { color: var(--muted); }
+.gender-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.g-btn { padding: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; color: var(--mid); font-family: "DM Sans", sans-serif; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.6rem; justify-content: center; }
+.g-btn:hover { border-color: rgba(201,168,76,0.4); color: var(--cream); }
+.g-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+.mode-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.m-btn { padding: 0.9rem 1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; color: var(--cream); font-family: "DM Sans", sans-serif; cursor: pointer; transition: all 0.2s; text-align: left; display: flex; align-items: center; gap: 0.75rem; }
+.m-btn:hover { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.04); }
+.m-btn.active { border-color: var(--gold); background: var(--gold-dim); }
+.m-icon { font-size: 1.2rem; flex-shrink: 0; }
+.m-name { font-weight: 500; font-size: 0.84rem; }
+.m-desc { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+.ob-begin { width: 100%; padding: 1rem; background: var(--gold); border: none; border-radius: 10px; color: var(--dark); font-family: "DM Sans", sans-serif; font-size: 0.88rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; margin-top: 1.5rem; transition: all 0.3s; }
+.ob-begin:hover { background: var(--gold-light); transform: translateY(-1px); }
+.ob-begin:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* ═══════════════════════════════
+   SCREEN 3 — CHAT APP
+═══════════════════════════════ */
+#chat { display: flex; background: var(--dark); }
+
+/* SIDEBAR */
+.sidebar { width: 270px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sb-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.sb-logo { font-family: "Bebas Neue", sans-serif; font-size: 1.5rem; letter-spacing: 0.15em; color: var(--gold); cursor: pointer; }
+.sb-logo span { color: var(--cream); }
+.sb-badge { font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,168,76,0.3); padding: 0.18rem 0.45rem; border-radius: 4px; }
+.sb-user { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.8rem; }
+.sb-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), #8B6030); display: flex; align-items: center; justify-content: center; font-family: "Bebas Neue", sans-serif; font-size: 1rem; color: var(--dark); flex-shrink: 0; }
+.sb-name { font-size: 0.86rem; font-weight: 500; }
+.sb-level { font-size: 0.66rem; color: var(--gold); margin-top: 0.1rem; }
+.conf-section { padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); }
+.conf-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+.conf-val { font-family: "Bebas Neue", sans-serif; font-size: 1.2rem; color: var(--gold); }
+.conf-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; background: linear-gradient(to right, var(--gold), var(--gold-light)); border-radius: 2px; transition: width 1s ease; width: 20%; }
+.sc-section { padding: 0.9rem 1.5rem 0.5rem; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.sc-title { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }
+.sc-list { display: flex; flex-direction: column; gap: 0.25rem; overflow-y: auto; flex: 1; }
+.sc-item { padding: 0.65rem 0.85rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.65rem; border: 1px solid transparent; }
+.sc-item:hover { background: rgba(255,255,255,0.04); }
+.sc-item.active { background: var(--gold-dim); border-color: rgba(201,168,76,0.25); }
+.sc-item-name { font-size: 0.78rem; }
+.sc-item-tag { font-size: 0.58rem; color: var(--muted); }
+.challenge-box { margin: 0.75rem 1.25rem 1.25rem; padding: 0.9rem; background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.18); border-radius: 10px; }
+.challenge-box .ch-title { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
+.challenge-box .ch-text { font-size: 0.76rem; color: var(--cream); line-height: 1.5; margin-bottom: 0.6rem; }
+.challenge-box .ch-btn { font-size: 0.68rem; color: var(--gold); background: none; border: 1px solid rgba(201,168,76,0.3); border-radius: 6px; padding: 0.3rem 0.65rem; cursor: pointer; font-family: "DM Sans", sans-serif; transition: all 0.2s; }
+.challenge-box .ch-btn:hover { background: var(--gold-dim); }
+
+/* CHAT MAIN */
+.chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.chat-top { padding: 0.9rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--panel); flex-shrink: 0; }
+.chat-coach { display: flex; align-items: center; gap: 0.85rem; }
+.coach-av { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #1A1A2E, #2C1810); border: 1.5px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.coach-n { font-size: 0.86rem; font-weight: 500; }
+.coach-s { font-size: 0.66rem; color: var(--green); display: flex; align-items: center; gap: 0.3rem; }
+.coach-s::before { content: ""; display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+.chat-actions { display: flex; align-items: center; gap: 0.6rem; }
+.sc-tag-badge { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,168,76,0.3); padding: 0.22rem 0.65rem; border-radius: 20px; background: var(--gold-dim); }
+.top-btn { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 0.38rem 0.85rem; color: var(--mid); font-family: "DM Sans", sans-serif; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; }
+.top-btn:hover { border-color: rgba(201,168,76,0.3); color: var(--cream); }
+
+/* MESSAGES */
+#msgs { flex: 1; overflow-y: auto; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.1rem; scroll-behavior: smooth; }
+#msgs::-webkit-scrollbar { width: 3px; }
+#msgs::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.15); border-radius: 2px; }
+.mrow { display: flex; gap: 0.8rem; animation: mIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes mIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+.mrow.user { flex-direction: row-reverse; }
+.mav { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; margin-top: 2px; }
+.mav.ai { background: linear-gradient(135deg, #1A1A2E, #2C1810); border: 1px solid rgba(201,168,76,0.4); }
+.mav.me { background: linear-gradient(135deg, var(--gold), #8B6030); font-family: "Bebas Neue", sans-serif; color: var(--dark); }
+.mbody { max-width: 72%; display: flex; flex-direction: column; gap: 0.25rem; }
+.mrow.user .mbody { align-items: flex-end; }
+.msender { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 0 0.25rem; }
+.bub { padding: 0.85rem 1.1rem; border-radius: 14px; font-size: 0.87rem; line-height: 1.65; }
+.bub.ai { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 4px 14px 14px 14px; }
+.bub.me { background: linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.09)); border: 1px solid rgba(201,168,76,0.25); border-radius: 14px 4px 14px 14px; }
+.typing-row { display: flex; gap: 0.8rem; }
+.typing-bub { padding: 0.85rem 1.1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 4px 14px 14px 14px; display: flex; gap: 4px; align-items: center; }
+.tdot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: 0.5; animation: tb 1.2s ease-in-out infinite; }
+.tdot:nth-child(2) { animation-delay: 0.2s; }
+.tdot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes tb { 0%,60%,100% { transform: none; opacity: 0.3; } 30% { transform: translateY(-5px); opacity: 1; } }
+.sc-intro { background: linear-gradient(135deg, rgba(201,168,76,0.06), rgba(201,168,76,0.01)); border: 1px solid rgba(201,168,76,0.18); border-radius: 14px; padding: 1.4rem; animation: mIn 0.4s both; }
+.sc-intro-ey { font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+.sc-intro h3 { font-family: "Cormorant Garamond", serif; font-size: 1.25rem; font-weight: 400; margin-bottom: 0.35rem; }
+.sc-intro p { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+.err-box { background: rgba(224,92,92,0.08); border: 1px solid rgba(224,92,92,0.25); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.8rem; color: var(--red); line-height: 1.6; }
+
+/* INPUT */
+.input-area { padding: 1.1rem 2rem 1.4rem; border-top: 1px solid var(--border); background: var(--panel); flex-shrink: 0; }
+.qr-row { display: flex; gap: 0.45rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.qr { padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 20px; font-size: 0.71rem; color: var(--mid); cursor: pointer; font-family: "DM Sans", sans-serif; transition: all 0.2s; white-space: nowrap; }
+.qr:hover { border-color: rgba(201,168,76,0.35); color: var(--cream); }
+.input-row { display: flex; gap: 0.7rem; align-items: flex-end; }
+#msgInput { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.85rem 1.1rem; color: var(--cream); font-family: "DM Sans", sans-serif; font-size: 0.9rem; outline: none; resize: none; min-height: 48px; max-height: 120px; line-height: 1.5; transition: border-color 0.3s; overflow-y: auto; }
+#msgInput:focus { border-color: rgba(201,168,76,0.45); }
+#msgInput::placeholder { color: var(--muted); }
+.send-btn { width: 48px; height: 48px; background: var(--gold); border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+.send-btn:hover { background: var(--gold-light); transform: scale(1.05); }
+.send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.send-btn svg { width: 17px; height: 17px; fill: var(--dark); }
+.input-hint { margin-top: 0.5rem; font-size: 0.65rem; color: var(--muted); text-align: center; }
+
+/* RIGHT PANEL */
+.right-panel { width: 250px; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 1.4rem; display: flex; flex-direction: column; gap: 1.4rem; }
+.right-panel::-webkit-scrollbar { width: 3px; }
+.rp-title { font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.7rem; }
+.skill-item { margin-bottom: 0.85rem; }
+.skill-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.75rem; }
+.skill-val { color: var(--gold); font-weight: 500; font-size: 0.7rem; }
+.skill-bg { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
+.skill-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+.mstat { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 0.7rem; text-align: center; }
+.mstat-val { font-family: "Bebas Neue", sans-serif; font-size: 1.7rem; color: var(--gold); line-height: 1; }
+.mstat-label { font-size: 0.6rem; color: var(--muted); margin-top: 0.15rem; }
+.mood-row { display: flex; gap: 0.4rem; }
+.mood-btn { flex: 1; padding: 0.45rem 0.2rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+.mood-btn .ml { font-size: 0.52rem; color: var(--muted); font-family: "DM Sans", sans-serif; }
+.mood-btn:hover, .mood-btn.active { border-color: rgba(201,168,76,0.35); background: var(--gold-dim); }
+.tip-box { background: rgba(79,155,184,0.07); border: 1px solid rgba(79,155,184,0.18); border-radius: 10px; padding: 0.9rem; }
+.tip-label { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); margin-bottom: 0.4rem; }
+.tip-box p { font-size: 0.76rem; color: var(--cream); line-height: 1.6; opacity: 0.85; }
+.quote-box { font-family: "Cormorant Garamond", serif; font-size: 1rem; font-style: italic; color: var(--gold); line-height: 1.5; opacity: 0.9; }
+
+/* COMPLETE OVERLAY */
+#complete-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.87); z-index: 400; align-items: center; justify-content: center; }
+#complete-overlay.show { display: flex; }
+.comp-card { background: var(--charcoal); border: 1px solid rgba(201,168,76,0.3); border-radius: 20px; padding: 3rem; max-width: 420px; width: 90%; text-align: center; }
+.comp-card .trophy { font-size: 3rem; margin-bottom: 1rem; }
+.comp-card h2 { font-family: "Cormorant Garamond", serif; font-size: 2rem; font-weight: 300; margin-bottom: 0.5rem; }
+.comp-card h2 em { color: var(--gold); font-style: italic; }
+.comp-card p { color: var(--muted); font-size: 0.83rem; line-height: 1.7; margin-bottom: 2rem; }
+.comp-btns { display: flex; gap: 0.75rem; justify-content: center; }
+.comp-btn { padding: 0.75rem 1.4rem; border-radius: 10px; font-family: "DM Sans", sans-serif; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.comp-btn.p { background: var(--gold); color: var(--dark); border: none; font-weight: 500; }
+.comp-btn.p:hover { background: var(--gold-light); }
+.comp-btn.g { background: transparent; color: var(--cream); border: 1px solid var(--border); }
+.comp-btn.g:hover { border-color: rgba(201,168,76,0.3); }
+
+@media (max-width: 1100px) { .right-panel { display: none; } }
+@media (max-width: 720px) { .sidebar { display: none; } .nav { padding: 1rem 1.5rem; } .hero { grid-template-columns: 1fr; } .hero-right { display: none; } .hero-left { padding: 6rem 1.5rem 4rem; } .gender-section { grid-template-columns: 1fr; } .phases-grid { grid-template-columns: 1fr; } .hero-stats { gap: 2rem; padding: 2rem 1.5rem; flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 1: LANDING PAGE
+═══════════════════════════════════════ -->
+<div class="screen" id="landing">
+
+  <nav class="nav">
+    <a class="nav-logo" href="#">CONFI<span>DY</span></a>
+    <ul class="nav-links">
+      <li><a href="#phases-section">Phases</a></li>
+      <li><a href="#phases-section">How It Works</a></li>
+      <li><a href="#" onclick="goToOnboarding()" class="nav-cta">Start Free</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">The Confidence OS</div>
+      <h1>Own Every<br><em>Room You<br>Walk Into</em></h1>
+      <p class="hero-desc">Confidy is a complete self-transformation platform for both men and women — combining AI confidence coaching, style intelligence, and social media presence into one system.</p>
+      <div class="hero-btns">
+        <button class="btn-gold" onclick="goToOnboarding()">Start Your Journey</button>
+        <button class="btn-ghost-link" onclick="document.getElementById('phases-section').scrollIntoView({behavior:'smooth'})">See the 3 Phases</button>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-chat-card">
+        <div class="hcc-label">AI Confidence Coach — Live Session</div>
+        <div class="hcc-bubble ai">Try approaching someone and say "I noticed you from across the room..." — let's practice it right now.</div>
+        <div class="hcc-bubble user">What if they reject me?</div>
+        <div class="hcc-bubble ai">Rejection is data, not failure. Let's reframe this together and build your armor.</div>
+        <div class="hcc-status"><div class="hcc-dot"></div> Confidy AI is ready for you</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="hero-stats">
+    <div><div class="stat-num">3</div><div class="stat-label">Transformation Phases</div></div>
+    <div><div class="stat-num">6+</div><div class="stat-label">Practice Scenarios</div></div>
+    <div><div class="stat-num">AI</div><div class="stat-label">Powered Coaching</div></div>
+    <div><div class="stat-num">360°</div><div class="stat-label">Lifestyle Upgrade</div></div>
+  </div>
+
+  <div class="gender-section">
+    <div class="gender-card male">
+      <div class="g-tag">For Men</div>
+      <h2>Build the Alpha<br>Within You</h2>
+      <p>From approaching confidently, to dressing sharp, to building a magnetic online presence — Confidy gives men the full toolkit to become who they know they can be.</p>
+      <div class="gender-big-letter">M</div>
+    </div>
+    <div class="gender-card female">
+      <div class="g-tag">For Women</div>
+      <h2>Radiate the Energy<br>You Deserve</h2>
+      <p>Master confident communication, curate your signature style, and craft a social media presence that turns heads — on your terms, in your voice.</p>
+      <div class="gender-big-letter">F</div>
+    </div>
+  </div>
+
+  <section class="phases" id="phases-section">
+    <div class="section-header">
+      <div class="section-eyebrow">The System</div>
+      <h2>Three Phases. One New You.</h2>
+    </div>
+    <div class="phases-grid">
+      <div class="phase-card">
+        <div class="phase-icon">&#128483;</div>
+        <div class="phase-num">PHASE 01 — AVAILABLE NOW</div>
+        <h3>Communication<br>and Confidence</h3>
+        <p>Build genuine social confidence through AI-powered conversations, real-world challenges, and expert-backed mindset work.</p>
+        <ul class="phase-features">
+          <li>AI Chat Practice — approach and conversation simulations</li>
+          <li>Weekly Confidence Challenges with progress tracking</li>
+          <li>Rejection Recovery mindset module</li>
+          <li>Texting and real-life communication skills</li>
+          <li>Premium 1-on-1 human coaching sessions</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-icon">&#128084;</div>
+        <div class="phase-num">PHASE 02 — COMING SOON</div>
+        <h3>Style and<br>Fashion Intelligence</h3>
+        <p>Your wardrobe should tell your story before you open your mouth. Confidy learns who you are — and curates a personalized style system.</p>
+        <ul class="phase-features">
+          <li>Personality-based style profiling quiz</li>
+          <li>AI-curated outfit suggestions for your body type</li>
+          <li>Direct shopping links matched to your vibe</li>
+          <li>Style evolution — dress for who you are becoming</li>
+          <li>Seasonal wardrobe planning and audits</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-icon">&#128247;</div>
+        <div class="phase-num">PHASE 03 — COMING SOON</div>
+        <h3>Social Media<br>Presence Mastery</h3>
+        <p>Control the impression you make on thousands of strangers. Get AI-directed posing, angles, and content strategy tailored to your vision.</p>
+        <ul class="phase-features">
+          <li>Define your archetype — celebrity style matching</li>
+          <li>AI pose recommendations by photo context</li>
+          <li>Profile aesthetic and content strategy</li>
+          <li>Attract your ideal audience with intentional imagery</li>
+          <li>Platform-specific tips for Instagram, TikTok, LinkedIn</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <h2>The Person You Want<br>to <em>Become</em><br>Is One Step Away</h2>
+    <p>Start with Phase 1 today — completely free. Your AI coach is ready and waiting.</p>
+    <div class="cta-btns">
+      <button class="btn-gold" onclick="goToOnboarding()">Start My Journey Free</button>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-logo">CONFI<span>DY</span></div>
+    <p>Built to transform. Phase 1 live now.</p>
+    <p style="font-size:0.72rem;color:var(--muted)">© 2025 Confidy</p>
+  </footer>
+
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 2: ONBOARDING
+═══════════════════════════════════════ -->
+<div class="screen hidden" id="onboarding">
+  <div class="ob-logo">CONFI<span>DY</span></div>
+  <div class="ob-sub">Phase 1 · AI Confidence Coach</div>
+  <div class="ob-card">
+    <h2>Build your<br><em>confidence profile</em></h2>
+    <p>Answer a few quick questions and your AI coach will tailor everything to your goals.</p>
+    <div class="ob-step">
+      <div class="ob-label">Your Name</div>
+      <input class="ob-input" id="nameInput" type="text" placeholder="What should we call you?" maxlength="30" oninput="checkReady()" />
+    </div>
+    <div class="ob-step">
+      <div class="ob-label">I Am</div>
+      <div class="gender-row">
+        <button class="g-btn" onclick="pickGender(this,'male')">&#9794; Male</button>
+        <button class="g-btn" onclick="pickGender(this,'female')">&#9792; Female</button>
+      </div>
+    </div>
+    <div class="ob-step">
+      <div class="ob-label">I Want To Work On</div>
+      <div class="mode-list">
+        <button class="m-btn" onclick="pickMode(this,'approach')"><span class="m-icon">&#9749;</span><div><div class="m-name">Approaching and Starting Conversations</div><div class="m-desc">Coffee shops, parties, real-life situations</div></div></button>
+        <button class="m-btn" onclick="pickMode(this,'texting')"><span class="m-icon">&#128172;</span><div><div class="m-name">Texting and Online Conversations</div><div class="m-desc">DMs, dating apps, keeping chats alive</div></div></button>
+        <button class="m-btn" onclick="pickMode(this,'rejection')"><span class="m-icon">&#128737;</span><div><div class="m-name">Rejection Recovery and Mindset</div><div class="m-desc">Reframe failure, build resilience</div></div></button>
+        <button class="m-btn" onclick="pickMode(this,'social')"><span class="m-icon">&#127919;</span><div><div class="m-name">Social Confidence and Group Dynamics</div><div class="m-desc">Be memorable in groups and networking</div></div></button>
+      </div>
+    </div>
+    <button class="ob-begin" id="beginBtn" disabled onclick="beginJourney()">Begin My Journey</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 3: CHAT
+═══════════════════════════════════════ -->
+<div class="screen hidden" id="chat">
+  <aside class="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo" onclick="goToLanding()">CONFI<span>DY</span></div>
+      <span class="sb-badge">Phase 1</span>
+    </div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">?</div>
+      <div>
+        <div class="sb-name" id="sbName">Welcome</div>
+        <div class="sb-level" id="sbLevel">&#128293; Confidence Beginner</div>
+      </div>
+    </div>
+    <div class="conf-section">
+      <div class="conf-row"><span>Confidence Score</span><span class="conf-val" id="confVal">20</span></div>
+      <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:20%"></div></div>
+    </div>
+    <div class="sc-section">
+      <div class="sc-title">Practice Scenarios</div>
+      <div class="sc-list">
+        <div class="sc-item active" onclick="switchSc(this,'approach')"><span>&#9749;</span><div><div class="sc-item-name">Coffee Shop Approach</div><div class="sc-item-tag">Beginner</div></div></div>
+        <div class="sc-item" onclick="switchSc(this,'texting')"><span>&#128172;</span><div><div class="sc-item-name">Texting Practice</div><div class="sc-item-tag">All Levels</div></div></div>
+        <div class="sc-item" onclick="switchSc(this,'party')"><span>&#127881;</span><div><div class="sc-item-name">Party and Social Event</div><div class="sc-item-tag">Intermediate</div></div></div>
+        <div class="sc-item" onclick="switchSc(this,'rejection')"><span>&#128737;</span><div><div class="sc-item-name">Rejection Recovery</div><div class="sc-item-tag">Mindset</div></div></div>
+        <div class="sc-item" onclick="switchSc(this,'gym')"><span>&#128170;</span><div><div class="sc-item-name">Gym Approach</div><div class="sc-item-tag">Advanced</div></div></div>
+        <div class="sc-item" onclick="switchSc(this,'workplace')"><span>&#128188;</span><div><div class="sc-item-name">Workplace Confidence</div><div class="sc-item-tag">Professional</div></div></div>
+      </div>
+    </div>
+    <div class="challenge-box">
+      <div class="ch-title">&#127919; This Week's Challenge</div>
+      <div class="ch-text" id="chText">Start a conversation with one stranger today.</div>
+      <button class="ch-btn" onclick="tryChallenge()">Try It in Practice</button>
+    </div>
+  </aside>
+
+  <main class="chat-main">
+    <div class="chat-top">
+      <div class="chat-coach">
+        <div class="coach-av">&#10022;</div>
+        <div>
+          <div class="coach-n">Confidy AI Coach</div>
+          <div class="coach-s" id="coachStatus">Ready to practice</div>
+        </div>
+      </div>
+      <div class="chat-actions">
+        <span class="sc-tag-badge" id="scTagBadge">Coffee Shop</span>
+        <button class="top-btn" onclick="resetSession()">New Session</button>
+        <button class="top-btn" onclick="getAnalysis()">Full Analysis</button>
+      </div>
+    </div>
+
+    <div id="msgs"></div>
+
+    <div class="input-area">
+      <div class="qr-row" id="qrRow"></div>
+      <div class="input-row">
+        <textarea id="msgInput" placeholder="Type what you would say..." rows="1" onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMsg()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Enter to send. Shift+Enter for new line.</div>
+    </div>
+  </main>
+
+  <aside class="right-panel">
+    <div>
+      <div class="rp-title">Skills Progress</div>
+      <div class="skill-item"><div class="skill-row"><span>Opening Lines</span><span class="skill-val" id="s1v">15%</span></div><div class="skill-bg"><div class="skill-fill" id="s1" style="width:15%;background:var(--gold)"></div></div></div>
+      <div class="skill-item"><div class="skill-row"><span>Conversation Flow</span><span class="skill-val" id="s2v">8%</span></div><div class="skill-bg"><div class="skill-fill" id="s2" style="width:8%;background:var(--blue)"></div></div></div>
+      <div class="skill-item"><div class="skill-row"><span>Rejection Handling</span><span class="skill-val" id="s3v">5%</span></div><div class="skill-bg"><div class="skill-fill" id="s3" style="width:5%;background:#BB6F99"></div></div></div>
+      <div class="skill-item"><div class="skill-row"><span>Mindset and Frame</span><span class="skill-val" id="s4v">20%</span></div><div class="skill-bg"><div class="skill-fill" id="s4" style="width:20%;background:var(--green)"></div></div></div>
+    </div>
+    <div>
+      <div class="rp-title">Session Stats</div>
+      <div class="stat-grid">
+        <div class="mstat"><div class="mstat-val" id="stMsgs">0</div><div class="mstat-label">Messages</div></div>
+        <div class="mstat"><div class="mstat-val">1</div><div class="mstat-label">Day Streak</div></div>
+        <div class="mstat"><div class="mstat-val" id="stSc">1</div><div class="mstat-label">Scenarios</div></div>
+        <div class="mstat"><div class="mstat-val" id="stScore">0</div><div class="mstat-label">Best Score</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="rp-title">How Are You Feeling?</div>
+      <div class="mood-row">
+        <button class="mood-btn" onclick="setMood(this)"><span>&#128560;</span><span class="ml">Nervous</span></button>
+        <button class="mood-btn" onclick="setMood(this)"><span>&#128528;</span><span class="ml">Neutral</span></button>
+        <button class="mood-btn" onclick="setMood(this)"><span>&#128170;</span><span class="ml">Ready</span></button>
+        <button class="mood-btn" onclick="setMood(this)"><span>&#128293;</span><span class="ml">On Fire</span></button>
+      </div>
+    </div>
+    <div class="tip-box">
+      <div class="tip-label">Coach Tip</div>
+      <p id="tipTxt">The best opening line is the one you actually say. Imperfect action beats perfect silence.</p>
+    </div>
+    <div class="quote-box" id="quoteTxt">"Every conversation is practice. Every rejection is data."</div>
+  </aside>
+</div>
+
+<!-- COMPLETE -->
+<div id="complete-overlay">
+  <div class="comp-card">
+    <div class="trophy">&#127942;</div>
+    <h2>Session <em>Complete!</em></h2>
+    <p id="compMsg">Amazing work. Every session builds real confidence.</p>
+    <div class="comp-btns">
+      <button class="comp-btn p" onclick="doNextSc()">Next Scenario</button>
+      <button class="comp-btn g" onclick="document.getElementById('complete-overlay').classList.remove('show')">Keep Practicing</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── YOUR API KEY ──────────────────────────────
+var API_KEY = "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";
+// ─────────────────────────────────────────────
+
+var userName = "", userGender = "", currentMode = "", currentSc = "approach";
+var chatHistory = [], msgCount = 0, confScore = 20, busy = false, scCount = 1;
+
+var SC = {
+  approach: { name: "Coffee Shop Approach", tag: "Coffee Shop", intro: "You are at a coffee shop. There is an attractive person sitting nearby reading or on their laptop. This is your practice run. I will play the other person. Say whatever feels natural and I will coach you after each exchange.", challenge: "Start a conversation with one stranger today. Ask anything. Just open your mouth.", qr: ["Hey, is that seat taken?", "What are you working on?", "That book looks interesting", "Do you know any good places nearby?"] },
+  texting: { name: "Texting Practice", tag: "Texting and DMs", intro: "You matched with someone or got their number. Time to text first. I will play the other person and coach you on keeping the conversation alive and interesting.", challenge: "Text someone you have been meaning to reach out to. Use a specific observation about them.", qr: ["Hey! So...", "I was thinking about what you said", "Random question for you", "Still thinking about that conversation"] },
+  party: { name: "Party and Social Event", tag: "Social Event", intro: "You are at a party. Someone is standing nearby looking around. Let us practice being socially fluid and making anyone feel comfortable talking to you.", challenge: "At your next social event, introduce yourself to 3 people you do not know.", qr: ["Do you know the host?", "Is this your first time here?", "Great playlist right?", "Are you hiding from people too?"] },
+  rejection: { name: "Rejection Recovery", tag: "Rejection and Mindset", intro: "This is a mindset coaching session. Tell me about a recent rejection or situation where things did not go how you wanted. Let us process it and build real resilience together.", challenge: "Go get rejected on purpose today. Approach someone just to practice, not to succeed.", qr: ["I got rejected and it hit hard", "I freeze before I even try", "I feel like I am not good enough", "How do I stop caring so much?"] },
+  gym: { name: "Gym Approach", tag: "Gym Scenario", intro: "You are at the gym. Someone catches your eye. The gym is a delicate social environment. I will play the other person. Let us practice approaching without being intrusive.", challenge: "Give someone at the gym a genuine compliment about their workout form.", qr: ["Do you know how to use this machine?", "You have great form, how long training?", "Are you using this bench?", "I have seen you here a lot, what is your routine?"] },
+  workplace: { name: "Workplace Confidence", tag: "Professional", intro: "Confidence at work is a career superpower. Whether speaking up in meetings or talking to someone senior, let us practice and coach through your specific situation.", challenge: "Speak up in your next meeting. Make one point, ask one question.", qr: ["I struggle to speak up in meetings", "There is someone senior I want to talk to", "I need to give difficult feedback", "I freeze when presenting"] },
+  social: { name: "Group and Social Dynamics", tag: "Social Dynamics", intro: "Being magnetic in groups is a skill. Let us practice owning the room, contributing to conversations, and being genuinely memorable without trying too hard.", challenge: "At your next group hangout, start one topic of conversation that gets everyone talking.", qr: ["I go quiet in groups", "I never know what to say", "People seem to forget me", "How do I become more interesting?"] }
+};
+
+var TIPS = [
+  "The best opening line is the one you actually say. Imperfect action beats perfect silence.",
+  "Confidence is not the absence of fear. It is acting in spite of it.",
+  "People remember how you made them feel, not exactly what you said.",
+  "Eye contact and a genuine smile is already 80 percent of the first impression.",
+  "Rejection says nothing about your worth. It is just a mismatch. Keep moving.",
+  "The goal is not to impress. It is to connect. Curiosity is more attractive than performance.",
+  "Ask one question then actually listen. Most people are terrible listeners. That makes you rare."
+];
+
+var QUOTES = [
+  "Every conversation is practice. Every rejection is data.",
+  "You miss 100 percent of the approaches you do not make.",
+  "Confidence is built in the moments you choose action over comfort.",
+  "The version of you that you want to be is one conversation away.",
+  "Social skills are trained, not born."
+];
+
+// ── SCREEN NAVIGATION ──
+function show(id) {
+  document.querySelectorAll(".screen").forEach(function(s) { s.classList.add("hidden"); });
+  document.getElementById(id).classList.remove("hidden");
+}
+
+function goToLanding() { show("landing"); }
+function goToOnboarding() { show("onboarding"); }
+
+// ── ONBOARDING ──
+function checkReady() {
+  var name = document.getElementById("nameInput").value.trim();
+  document.getElementById("beginBtn").disabled = !(name && userGender && currentMode);
+}
+
+function pickGender(btn, g) {
+  document.querySelectorAll(".g-btn").forEach(function(b) { b.classList.remove("active"); });
+  btn.classList.add("active");
+  userGender = g;
+  checkReady();
+}
+
+function pickMode(btn, m) {
+  document.querySelectorAll(".m-btn").forEach(function(b) { b.classList.remove("active"); });
+  btn.classList.add("active");
+  currentMode = m;
+  checkReady();
+}
+
+function beginJourney() {
+  userName = document.getElementById("nameInput").value.trim();
+  currentSc = currentMode;
+  document.getElementById("sbAvatar").textContent = userName[0].toUpperCase();
+  document.getElementById("sbName").textContent = userName;
+  document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
+  show("chat");
+  loadSc(currentSc);
+}
+
+// ── SCENARIOS ──
+function loadSc(sc) {
+  currentSc = sc;
+  chatHistory = [];
+  msgCount = 0;
+  document.getElementById("msgs").innerHTML = "";
+  document.getElementById("stMsgs").textContent = "0";
+  var s = SC[sc] || SC.approach;
+  document.getElementById("scTagBadge").textContent = s.tag;
+  document.getElementById("chText").textContent = s.challenge;
+  document.getElementById("tipTxt").textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  document.getElementById("quoteTxt").textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  var intro = document.createElement("div");
+  intro.className = "sc-intro";
+  intro.innerHTML = "<div class='sc-intro-ey'>Current Scenario</div><h3>" + s.name + "</h3><p>" + s.intro + "</p>";
+  document.getElementById("msgs").appendChild(intro);
+  setQR(s.qr);
+  setTimeout(startGreeting, 700);
+}
+
+function setQR(arr) {
+  document.getElementById("qrRow").innerHTML = arr.map(function(r) {
+    return "<button class='qr' onclick=\"useQR(this)\">" + r + "</button>";
+  }).join("");
+}
+
+function useQR(btn) {
+  document.getElementById("msgInput").value = btn.textContent;
+  document.getElementById("qrRow").innerHTML = "";
+  sendMsg();
+}
+
+function switchSc(item, sc) {
+  document.querySelectorAll(".sc-item").forEach(function(i) { i.classList.remove("active"); });
+  item.classList.add("active");
+  scCount++;
+  document.getElementById("stSc").textContent = scCount;
+  loadSc(sc);
+}
+
+function tryChallenge() {
+  document.getElementById("msgInput").value = "Let us practice the weekly challenge";
+  sendMsg();
+}
+
+function resetSession() { loadSc(currentSc); }
+
+function doNextSc() {
+  document.getElementById("complete-overlay").classList.remove("show");
+  var keys = Object.keys(SC);
+  var next = keys[(keys.indexOf(currentSc) + 1) % keys.length];
+  document.querySelectorAll(".sc-item").forEach(function(i) {
+    var onclick = i.getAttribute("onclick") || "";
+    i.classList.toggle("active", onclick.indexOf("'" + next + "'") > -1);
+  });
+  loadSc(next);
+}
+
+// ── SYSTEM PROMPT ──
+function buildPrompt() {
+  var s = SC[currentSc] || SC.approach;
+  var gc = userGender === "male" ? "The user is male. Be direct, push toward action, reference male psychology around confidence and approaches." : "The user is female. Focus on their power, authenticity, and confidence in expressing interest on their own terms.";
+  return "You are Confidy AI, the world's most advanced confidence and social skills coach. You combine the best dating coach, therapist, social skills trainer, and motivational mentor into one. You are NOT a generic assistant.\n\nUSER: " + userName + ", " + userGender + "\nSCENARIO: " + s.name + "\nCONTEXT: " + s.intro + "\n\n" + gc + "\n\nYOUR METHOD — use these two sections in every response:\n\n[ROLEPLAY] Respond AS the other person in the scenario. Be realistic — real people are sometimes cold, distracted, or brief. Keep to 1-3 sentences max.\n\n[COACHING FEEDBACK] Break character and give specific coaching.\n- Rate with: GREEN for Strong, YELLOW for Decent, RED for Needs Work\n- Explain exactly why their words worked or did not\n- Give the next move or a better version to try\n- Build their mindset not just words\n\nFor mindset and rejection scenarios, skip roleplay and go full coaching mode.\n\nRULES:\n- Use " + userName + " by name occasionally\n- Keep responses under 180 words total\n- Be specific, never generic\n- Reference their exact words in feedback\n- After 8 solid exchanges, suggest they are ready for the next scenario";
+}
+
+// ── API ──
+async function callAI(msg) {
+  chatHistory.push({ role: "user", content: msg });
+  var resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: buildPrompt(), messages: chatHistory })
+  });
+  if (!resp.ok) {
+    var e = await resp.json().catch(function() { return {}; });
+    chatHistory.pop();
+    throw new Error(e.error ? e.error.message : "Error " + resp.status);
+  }
+  var data = await resp.json();
+  var reply = data.content[0].text;
+  chatHistory.push({ role: "assistant", content: reply });
+  return reply;
+}
+
+// ── MESSAGING ──
+async function startGreeting() {
+  showTyping();
+  setStatus("Coach is preparing your session...");
+  try {
+    var g = await callAI("[SYSTEM: Warmly greet " + userName + " and set the scene vividly for the " + (SC[currentSc] || SC.approach).name + " scenario. Be energizing and specific. Get them making their first move immediately. Under 90 words.]");
+    hideTyping();
+    addMsg("ai", g);
+    setStatus("Your turn. What do you say?");
+    bumpConf(5);
+  } catch (e) {
+    hideTyping();
+    showErr(e.message);
+    setStatus("Ready");
+  }
+}
+
+async function sendMsg() {
+  var input = document.getElementById("msgInput");
+  var txt = input.value.trim();
+  if (!txt || busy) return;
+  input.value = "";
+  input.style.height = "auto";
+  document.getElementById("qrRow").innerHTML = "";
+  addMsg("user", txt);
+  msgCount++;
+  document.getElementById("stMsgs").textContent = msgCount;
+  busy = true;
+  document.getElementById("sendBtn").disabled = true;
+  showTyping();
+  setStatus("Coach is responding...");
+  try {
+    var reply = await callAI(txt);
+    hideTyping();
+    addMsg("ai", reply);
+    setStatus("Your turn. What do you say?");
+    bumpConf(Math.floor(Math.random() * 4) + 2);
+    bumpSkills();
+    if (msgCount === 10) {
+      document.getElementById("stScore").textContent = confScore;
+      document.getElementById("compMsg").textContent = "Amazing work, " + userName + "! You completed a full session with " + msgCount + " exchanges. Every one was a rep toward real confidence.";
+      setTimeout(function() { document.getElementById("complete-overlay").classList.add("show"); }, 1800);
+    }
+  } catch (e) {
+    hideTyping();
+    showErr(e.message);
+    setStatus("Ready");
+  }
+  busy = false;
+  document.getElementById("sendBtn").disabled = false;
+  document.getElementById("msgInput").focus();
+}
+
+async function getAnalysis() {
+  if (msgCount < 2) { addMsg("ai", userName + ", we need at least a couple of exchanges first. Keep practicing then ask for your analysis!"); return; }
+  showTyping();
+  setStatus("Generating full analysis...");
+  try {
+    var a = await callAI("[SYSTEM: Give " + userName + " a comprehensive performance review of this session. Cover: 1) What they did well with specific examples, 2) Top 2 areas to improve, 3) Their strongest moment, 4) One specific drill to practice this week. Be encouraging but honest and specific.]");
+    hideTyping();
+    addMsg("ai", a);
+    setStatus("Analysis complete");
+  } catch (e) { hideTyping(); showErr(e.message); setStatus("Ready"); }
+}
+
+// ── UI ──
+function addMsg(role, text) {
+  var m = document.getElementById("msgs");
+  var row = document.createElement("div");
+  row.className = "mrow" + (role === "user" ? " user" : "");
+  var isMe = role === "user";
+  var fmt = text
+    .replace(/\[ROLEPLAY\]/gi, "<span style='font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--blue);display:block;margin-bottom:0.35rem;'>Roleplay</span>")
+    .replace(/\[COACHING FEEDBACK\]/gi, "<span style='font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);display:block;margin-top:0.75rem;margin-bottom:0.35rem;'>Coach Feedback</span>")
+    .replace(/\[COACHING\]/gi, "<span style='font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);display:block;margin-top:0.75rem;margin-bottom:0.35rem;'>Coach Feedback</span>")
+    .replace(/\n/g, "<br>");
+  row.innerHTML = "<div class='mav " + (isMe ? "me" : "ai") + "'>" + (isMe ? (userName[0] || "?").toUpperCase() : "&#10022;") + "</div><div class='mbody'><div class='msender'>" + (isMe ? userName : "Confidy Coach") + "</div><div class='bub " + (isMe ? "me" : "ai") + "'>" + fmt + "</div></div>";
+  m.appendChild(row);
+  m.scrollTop = m.scrollHeight;
+}
+
+function showErr(msg) {
+  var m = document.getElementById("msgs");
+  var el = document.createElement("div");
+  el.className = "err-box";
+  if (msg && (msg.indexOf("401") > -1 || msg.indexOf("api_key") > -1 || msg.indexOf("authentication") > -1)) {
+    el.textContent = "API Key issue. Make sure your key is correctly pasted in the HTML file and starts with sk-ant-";
+  } else {
+    el.textContent = "Connection error: " + msg;
+  }
+  m.appendChild(el);
+  m.scrollTop = m.scrollHeight;
+}
+
+var typEl = null;
+function showTyping() {
+  var m = document.getElementById("msgs");
+  typEl = document.createElement("div");
+  typEl.className = "typing-row";
+  typEl.innerHTML = "<div class='mav ai'>&#10022;</div><div class='typing-bub'><div class='tdot'></div><div class='tdot'></div><div class='tdot'></div></div>";
+  m.appendChild(typEl);
+  m.scrollTop = m.scrollHeight;
+}
+function hideTyping() { if (typEl) { typEl.remove(); typEl = null; } }
+function setStatus(t) { document.getElementById("coachStatus").textContent = t; }
+function handleKey(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+function autoGrow(el) { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 120) + "px"; }
+function setMood(btn) { document.querySelectorAll(".mood-btn").forEach(function(b) { b.classList.remove("active"); }); btn.classList.add("active"); }
+
+function bumpConf(d) {
+  confScore = Math.min(100, confScore + d);
+  document.getElementById("confVal").textContent = confScore;
+  document.getElementById("confFill").style.width = confScore + "%";
+  var lv = confScore < 30 ? "&#128293; Confidence Beginner" : confScore < 50 ? "&#9889; Rising Challenger" : confScore < 70 ? "&#128142; Confident Communicator" : confScore < 90 ? "&#127885; Social Master" : "&#128081; Confidence Legend";
+  document.getElementById("sbLevel").innerHTML = lv;
+}
+
+function bumpSkills() {
+  [["s1",3],["s2",2],["s3",1],["s4",2]].forEach(function(p) {
+    var el = document.getElementById(p[0]);
+    var v = Math.min(100, parseInt(el.style.width) + (Math.random() > 0.5 ? p[1] : 0));
+    el.style.width = v + "%";
+    document.getElementById(p[0] + "v").textContent = v + "%";
+  });
+}
+</script>
+</body>
+</html>
