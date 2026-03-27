@@ -1734,10 +1734,11 @@ async function callScoreEngine(aiReply) {
 
     if (userMessages.length < 1) return;
 
-    var resp = await fetch("/api/score", {
+    var resp = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        scoreOnly: true,
         messages: chatHistory.filter(function(m) { return m.content.indexOf("[SYSTEM") !== 0; }),
         scenario: currentSc
       })
