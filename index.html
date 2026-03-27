@@ -1725,6 +1725,99 @@ async function callAITransient(instruction) {
   return reply;
 }
 
+// ── PYTHON SCORING ENGINE ──
+async function callScoreEngine(aiReply) {
+  try {
+    var userMessages = chatHistory.filter(function(m) {
+      return m.role === "user" && m.content.indexOf("[SYSTEM") !== 0;
+    });
+
+    if (userMessages.length < 1) return;
+
+    var resp = await fetch("/api/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: chatHistory.filter(function(m) { return m.content.indexOf("[SYSTEM") !== 0; }),
+        scenario: currentSc
+      })
+    });
+
+    if (!resp.ok) return;
+    var scores = await resp.json();
+    if (!scores || scores.error) return;
+
+    // Apply real scores from Python NLP engine
+    applyRealScores(scores, aiReply);
+
+  } catch (e) {
+    // Silently fall back to bump-based scoring if Python engine fails
+    bumpSkills(aiReply);
+  }
+}
+
+function applyRealScores(scores, aiReply) {
+  // Smoothly transition to real scores — blend current with new
+  var skillMap = [
+    { id: "s1", key: "opening",   label: "s1v" },
+    { id: "s2", key: "flow",      label: "s2v" },
+    { id: "s3", key: "rejection", label: "s3v" },
+    { id: "s4", key: "mindset",   label: "s4v" }
+  ];
+
+  skillMap.forEach(function(skill) {
+    var newVal = scores[skill.key];
+    if (typeof newVal !== "number") return;
+
+    var el = document.getElementById(skill.id);
+    var current = parseInt(el.style.width) || 0;
+
+    // Blend: 70% new score, 30% current — smooth transition
+    var blended = Math.round((newVal * 0.7) + (current * 0.3));
+    var final = Math.max(0, Math.min(100, blended));
+
+    el.style.width = final + "%";
+    document.getElementById(skill.label).textContent = final + "%";
+  });
+
+  // Show a score badge in the chat based on overall score
+  var overall = scores.overall || 0;
+  showScoreBadge(overall, aiReply);
+}
+
+function showScoreBadge(overall, aiReply) {
+  // Detect rating from AI reply text
+  var reply = (aiReply || "").toLowerCase();
+  var isGreen = reply.indexOf("green") > -1 || reply.indexOf("strong") > -1 || overall >= 65;
+  var isRed = reply.indexOf("red") > -1 || reply.indexOf("needs work") > -1 || overall < 35;
+
+  var color = isGreen ? "var(--green)" : isRed ? "var(--red)" : "var(--gold)";
+  var label = isGreen ? "Strong" : isRed ? "Needs Work" : "Decent";
+  var icon = isGreen ? "🟢" : isRed ? "🔴" : "🟡";
+
+  // Update confidence score based on NLP result
+  if (isGreen) {
+    bumpConf(Math.floor(Math.random() * 4) + 3);
+  } else if (isRed) {
+    bumpConf(1);
+  } else {
+    bumpConf(2);
+  }
+
+  // Flash the save indicator briefly with the score
+  var ind = document.getElementById("saveIndicator");
+  if (ind) {
+    ind.innerHTML = icon + " " + label + " (" + overall + "/100)";
+    ind.style.color = color;
+    ind.classList.add("show");
+    setTimeout(function() {
+      ind.classList.remove("show");
+      ind.innerHTML = "&#10003; Progress Saved";
+      ind.style.color = "";
+    }, 3000);
+  }
+}
+
 // ── MESSAGING ──
 async function startGreeting() {
   showTyping(); setStatus("Coach is preparing your session...");
@@ -1758,7 +1851,8 @@ async function sendMsg() {
     addMsg("ai", reply);
     await saveMessageRecord("assistant", reply);
     setStatus("Your turn. What do you say?");
-    bumpConf(Math.floor(Math.random() * 4) + 2); bumpSkills(reply);
+    // Call Python NLP scoring engine
+    await callScoreEngine(reply);
     await saveProgress();
     if (msgCount === 10) {
       document.getElementById("stScore").textContent = confScore;
