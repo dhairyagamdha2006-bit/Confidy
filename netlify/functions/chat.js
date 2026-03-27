@@ -1,9 +1,20 @@
 exports.handler = async function(event) {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: JSON.stringify({ error: { message: "Method Not Allowed" } })
+    };
   }
+
   try {
-    const { messages, system } = JSON.parse(event.body);
+    const parsed = JSON.parse(event.body || "{}");
+    const messages = Array.isArray(parsed.messages) ? parsed.messages : [];
+    const system = typeof parsed.system === "string" ? parsed.system : "";
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -18,13 +29,31 @@ exports.handler = async function(event) {
         messages
       })
     });
-    const data = await response.json();
+
+    const data = await response.json().catch(function() {
+      return { error: { message: "Invalid JSON returned by AI provider" } };
+    });
+
     return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      statusCode: response.status,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
       body: JSON.stringify(data)
     };
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: JSON.stringify({
+        error: {
+          message: err && err.message ? err.message : "Unexpected server error"
+        }
+      })
+    };
   }
 };
