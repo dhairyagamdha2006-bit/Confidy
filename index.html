@@ -539,12 +539,11 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
         </div>
       </div>
       <div class="chat-actions">
-  <div class="save-indicator" id="saveIndicator">&#10003; Progress Saved</div>
-  <span class="sc-tag-badge" id="scTagBadge">Coffee Shop</span>
-  <button class="top-btn" onclick="resetSession()">New Session</button>
-  <button class="top-btn" onclick="getAnalysis()">Full Analysis</button>
-  <button class="top-btn" onclick="handleLogout()">Sign Out</button>
-</div>
+        <div class="save-indicator" id="saveIndicator">&#10003; Progress Saved</div>
+        <span class="sc-tag-badge" id="scTagBadge">Coffee Shop</span>
+        <button class="top-btn" onclick="resetSession()">New Session</button>
+        <button class="top-btn" onclick="getAnalysis()">Full Analysis</button>
+      </div>
     </div>
     <div id="msgs"></div>
     <div class="input-area">
@@ -614,7 +613,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 // ── STATE ──
 var userName = "", userGender = "", currentMode = "", currentSc = "approach";
 var chatHistory = [], msgCount = 0, confScore = 20, busy = false, scCount = 1;
-var currentUser = null, authGender = "", passwordRecoveryMode = false;
+var currentUser = null, authGender = "", passwordRecoveryMode = false, activeConversationId = null;
 
 function getStorageKey(suffix) {
   var id = currentUser && currentUser.id ? currentUser.id : "guest";
@@ -631,6 +630,7 @@ function saveLocalState() {
     localStorage.setItem(getStorageKey("msgCount"), String(msgCount || 0));
     localStorage.setItem(getStorageKey("scCount"), String(scCount || 1));
     localStorage.setItem(getStorageKey("chatHistory"), JSON.stringify(chatHistory || []));
+    localStorage.setItem(getStorageKey("activeConversationId"), activeConversationId || "");
   } catch (e) {}
 }
 
@@ -648,14 +648,16 @@ function restoreLocalState() {
       var parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) chatHistory = parsed;
     }
+    activeConversationId = localStorage.getItem(getStorageKey("activeConversationId")) || activeConversationId || null;
   } catch (e) {}
 }
 
 function clearLocalState() {
   try {
-    ["currentSc","currentMode","name","gender","confScore","msgCount","scCount","chatHistory"].forEach(function(key) {
+    ["currentSc","currentMode","name","gender","confScore","msgCount","scCount","chatHistory","activeConversationId"].forEach(function(key) {
       localStorage.removeItem(getStorageKey(key));
     });
+    activeConversationId = null;
   } catch (e) {}
 }
 
@@ -710,6 +712,130 @@ function setActiveScenarioNav(sc) {
   document.querySelectorAll('.sc-item').forEach(function(item) { item.classList.remove('active'); });
   var target = document.querySelector('.sc-item[data-sc="' + sc + '"]');
   if (target) target.classList.add('active');
+}
+
+
+async function createConversationRecord(scKey) {
+  if (!currentUser || !currentUser.id) return null;
+  var s = SC[scKey] || SC.approach;
+  var title = s.name + " Session - " + new Date().toLocaleDateString();
+
+  var result = await sb.from("conversations").insert({
+    user_id: currentUser.id,
+    scenario_key: scKey,
+    scenario_label: s.name,
+    title: title,
+    status: "active"
+  }).select().single();
+
+  if (result.error) {
+    console.error("Failed to create conversation", result.error);
+    return null;
+  }
+
+  activeConversationId = result.data.id;
+  saveLocalState();
+  return result.data;
+}
+
+async function saveMessageRecord(role, content) {
+  if (!currentUser || !currentUser.id || !activeConversationId || !content) return;
+
+  var result = await sb.from("messages").insert({
+    conversation_id: activeConversationId,
+    user_id: currentUser.id,
+    role: role,
+    content: content
+  });
+
+  if (result.error) {
+    console.error("Failed to save message", result.error);
+    return;
+  }
+
+  await sb.from("conversations").update({
+    updated_at: new Date().toISOString()
+  }).eq("id", activeConversationId);
+}
+
+async function loadLatestConversation() {
+  if (!currentUser || !currentUser.id) return null;
+
+  var result = await sb.from("conversations")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (result.error || !result.data || !result.data.length) return null;
+  return result.data[0];
+}
+
+async function loadConversationMessages(conversationId) {
+  if (!currentUser || !currentUser.id || !conversationId) return [];
+
+  var result = await sb.from("messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", currentUser.id)
+    .order("created_at", { ascending: true });
+
+  if (result.error || !result.data) return [];
+  return result.data;
+}
+
+async function restoreConversationFromDatabase(conversation) {
+  if (!conversation) return false;
+
+  activeConversationId = conversation.id;
+  currentSc = conversation.scenario_key || "approach";
+  currentMode = currentSc;
+  setActiveScenarioNav(currentSc);
+
+  var s = SC[currentSc] || SC.approach;
+  document.getElementById("scTagBadge").textContent = s.tag;
+  document.getElementById("chText").textContent = s.challenge;
+  document.getElementById("tipTxt").textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  document.getElementById("quoteTxt").textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+
+  var msgs = await loadConversationMessages(conversation.id);
+  chatHistory = [];
+  msgCount = 0;
+
+  var msgsEl = document.getElementById("msgs");
+  msgsEl.innerHTML = "";
+
+  var intro = document.createElement("div");
+  intro.className = "sc-intro";
+  intro.innerHTML = "<div class='sc-intro-ey'>Current Scenario</div><h3>" + s.name + "</h3><p>" + s.intro + "</p>";
+  msgsEl.appendChild(intro);
+
+  for (var i = 0; i < msgs.length; i++) {
+    var item = msgs[i];
+    if (!item || !item.role || !item.content) continue;
+    if (item.role === "user" || item.role === "assistant") {
+      chatHistory.push({ role: item.role, content: item.content });
+      addMsg(item.role === "assistant" ? "ai" : "user", item.content);
+      if (item.role === "user") msgCount++;
+    }
+  }
+
+  document.getElementById("stMsgs").textContent = msgCount;
+  document.getElementById("stSc").textContent = scCount || 1;
+  setQR(s.qr);
+  saveLocalState();
+  show("chat");
+  return true;
+}
+
+async function finishConversationRecord() {
+  if (!currentUser || !currentUser.id || !activeConversationId) return;
+
+  await sb.from("conversations").update({
+    status: "completed",
+    ended_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }).eq("id", activeConversationId);
 }
 
 var SC = {
@@ -790,6 +916,7 @@ window.addEventListener("load", async function() {
     } else if (event === "SIGNED_OUT") {
       clearLocalState();
       currentUser = null;
+      activeConversationId = null;
       passwordRecoveryMode = false;
       show("landing");
     }
@@ -1038,6 +1165,7 @@ async function restoreRemoteAppState(profile) {
   confScore = appState.confScore || profile["Confidence_Score"] || 20;
   scCount = appState.scCount || profile.scenarios_completed || 1;
   chatHistory = Array.isArray(appState.chatHistory) ? appState.chatHistory : chatHistory;
+  activeConversationId = appState.activeConversationId || activeConversationId || null;
 
   document.getElementById("confVal").textContent = confScore;
   document.getElementById("confFill").style.width = confScore + "%";
@@ -1064,6 +1192,7 @@ async function loadUserProfile() {
     chatHistory = [];
     msgCount = 0;
     scCount = 1;
+    activeConversationId = null;
 
     await sb.from("profiles").upsert({
       id: currentUser.id,
@@ -1103,6 +1232,13 @@ async function loadUserProfile() {
     skill_rejection: p.skill_rejection || 5,
     skill_mindset: p.skill_mindset || 20
   });
+
+  var latestConversation = await loadLatestConversation();
+  if (latestConversation) {
+    var restored = await restoreConversationFromDatabase(latestConversation);
+    if (restored) return;
+  }
+
   await restoreRemoteAppState(p);
 }
 
@@ -1138,7 +1274,8 @@ async function saveProgress() {
     msgCount: msgCount || 0,
     scCount: scCount || 1,
     confScore: confScore || 20,
-    chatHistory: filterDisplayHistory(chatHistory || [])
+    chatHistory: filterDisplayHistory(chatHistory || []),
+    activeConversationId: activeConversationId || null
   };
 
   saveLocalState();
@@ -1162,6 +1299,7 @@ async function saveProgress() {
 
 async function handleLogout() {
   await saveProgress();
+  await finishConversationRecord();
   clearLocalState();
   await sb.auth.signOut();
   currentUser = null;
@@ -1169,6 +1307,7 @@ async function handleLogout() {
   userGender = "";
   currentMode = "";
   currentSc = "approach";
+  activeConversationId = null;
   show("landing");
 }
 
@@ -1185,6 +1324,8 @@ async function beginJourney() {
   document.getElementById("sbAvatar").textContent = (userName[0] || "U").toUpperCase();
   document.getElementById("sbName").textContent = userName;
   document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
+  await finishConversationRecord();
+  await createConversationRecord(currentSc);
   show("chat");
   loadSc(currentSc);
   await saveProgress();
@@ -1221,10 +1362,10 @@ function setQR(arr) {
 }
 
 function useQR(btn) { document.getElementById("msgInput").value = btn.textContent; document.getElementById("qrRow").innerHTML = ""; sendMsg(); }
-function switchSc(item, sc) { document.querySelectorAll(".sc-item").forEach(function(i) { i.classList.remove("active"); }); item.classList.add("active"); scCount++; document.getElementById("stSc").textContent = scCount; currentSc = sc; currentMode = sc; saveLocalState(); loadSc(sc); saveProgress(); }
+async function switchSc(item, sc) { document.querySelectorAll(".sc-item").forEach(function(i) { i.classList.remove("active"); }); item.classList.add("active"); scCount++; document.getElementById("stSc").textContent = scCount; currentSc = sc; currentMode = sc; await finishConversationRecord(); await createConversationRecord(sc); saveLocalState(); loadSc(sc); await saveProgress(); }
 function tryChallenge() { document.getElementById("msgInput").value = "Let us practice the weekly challenge"; sendMsg(); }
-function resetSession() { loadSc(currentSc); }
-function doNextSc() { document.getElementById("complete-overlay").classList.remove("show"); var keys = Object.keys(SC); loadSc(keys[(keys.indexOf(currentSc) + 1) % keys.length]); }
+async function resetSession() { await finishConversationRecord(); await createConversationRecord(currentSc); loadSc(currentSc); await saveProgress(); }
+async function doNextSc() { document.getElementById("complete-overlay").classList.remove("show"); var keys = Object.keys(SC); var nextSc = keys[(keys.indexOf(currentSc) + 1) % keys.length]; currentMode = nextSc; scCount++; document.getElementById("stSc").textContent = scCount; await finishConversationRecord(); await createConversationRecord(nextSc); loadSc(nextSc); await saveProgress(); }
 
 // ── SYSTEM PROMPT ──
 function buildPrompt() {
@@ -1361,7 +1502,14 @@ async function startGreeting() {
   showTyping(); setStatus("Coach is preparing your session...");
   try {
     var g = await callAITransient("[SYSTEM: Warmly greet " + userName + " and set the scene for the " + (SC[currentSc] || SC.approach).name + " scenario. Be energizing. Get them making their first move. Under 90 words.]");
-    hideTyping(); addMsg("ai", g); chatHistory.push({ role: "assistant", content: g }); saveLocalState(); await saveProgress(); setStatus("Your turn. What do you say?"); bumpConf(5);
+    hideTyping();
+    addMsg("ai", g);
+    chatHistory.push({ role: "assistant", content: g });
+    await saveMessageRecord("assistant", g);
+    saveLocalState();
+    await saveProgress();
+    setStatus("Your turn. What do you say?");
+    bumpConf(5);
   } catch (e) { hideTyping(); showErr(e.message); setStatus("Ready"); }
 }
 
@@ -1376,14 +1524,19 @@ async function sendMsg() {
   busy = true; document.getElementById("sendBtn").disabled = true;
   showTyping(); setStatus("Coach is responding...");
   try {
+    await saveMessageRecord("user", txt);
     var reply = await callAI(txt);
-    hideTyping(); addMsg("ai", reply); setStatus("Your turn. What do you say?");
+    hideTyping();
+    addMsg("ai", reply);
+    await saveMessageRecord("assistant", reply);
+    setStatus("Your turn. What do you say?");
     bumpConf(Math.floor(Math.random() * 4) + 2); bumpSkills();
     await saveProgress();
     if (msgCount === 10) {
       document.getElementById("stScore").textContent = confScore;
       document.getElementById("compMsg").textContent = "Amazing work, " + userName + "! You completed a full session with " + msgCount + " exchanges.";
-      saveProgress();
+      await saveProgress();
+      await finishConversationRecord();
       setTimeout(function() { document.getElementById("complete-overlay").classList.add("show"); }, 1800);
     }
   } catch (e) { hideTyping(); showErr(e.message); setStatus("Ready"); }
