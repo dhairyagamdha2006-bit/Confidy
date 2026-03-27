@@ -581,6 +581,38 @@ var userName = "", userGender = "", currentMode = "", currentSc = "approach";
 var chatHistory = [], msgCount = 0, confScore = 20, busy = false, scCount = 1;
 var currentUser = null, authGender = "";
 
+function getStorageKey(suffix) {
+  var id = currentUser && currentUser.id ? currentUser.id : "guest";
+  return "confidy_" + id + "_" + suffix;
+}
+
+function saveLocalState() {
+  try {
+    localStorage.setItem(getStorageKey("currentSc"), currentSc || "approach");
+    localStorage.setItem(getStorageKey("onboardingDone"), currentMode ? "1" : "0");
+    localStorage.setItem(getStorageKey("name"), userName || "");
+    localStorage.setItem(getStorageKey("gender"), userGender || "");
+  } catch (e) {}
+}
+
+function restoreLocalState() {
+  try {
+    currentSc = localStorage.getItem(getStorageKey("currentSc")) || currentSc || "approach";
+    currentMode = localStorage.getItem(getStorageKey("onboardingDone")) === "1" ? currentSc : currentMode;
+    if (!userName) userName = localStorage.getItem(getStorageKey("name")) || "";
+    if (!userGender) userGender = localStorage.getItem(getStorageKey("gender")) || "";
+  } catch (e) {}
+}
+
+function clearLocalState() {
+  try {
+    localStorage.removeItem(getStorageKey("currentSc"));
+    localStorage.removeItem(getStorageKey("onboardingDone"));
+    localStorage.removeItem(getStorageKey("name"));
+    localStorage.removeItem(getStorageKey("gender"));
+  } catch (e) {}
+}
+
 var SC = {
   approach: { name: "Coffee Shop Approach", tag: "Coffee Shop", intro: "You are at a coffee shop. There is an attractive person sitting nearby. This is your practice run. I will play the other person and coach you after each exchange.", challenge: "Start a conversation with one stranger today.", qr: ["Hey, is that seat taken?", "What are you working on?", "That book looks interesting", "Do you know any good places nearby?"] },
   texting: { name: "Texting Practice", tag: "Texting and DMs", intro: "You matched with someone or got their number. Time to text first. I will play the other person and coach you.", challenge: "Text someone you have been meaning to reach out to.", qr: ["Hey! So...", "I was thinking about what you said", "Random question for you", "Still thinking about that conversation"] },
@@ -602,30 +634,40 @@ function show(id) {
 
 // ── CHECK AUTH ON LOAD ──
 window.addEventListener("load", async function() {
-  // Handle email confirmation redirect
-  var hash = window.location.hash;
-  if (hash && hash.includes("access_token")) {
-    var result = await sb.auth.getSession();
-    if (result.data.session) {
-      currentUser = result.data.session.user;
-      window.location.hash = "";
-      await loadUserProfile();
-      return;
+  try {
+    var url = new URL(window.location.href);
+    if (url.searchParams.get("code")) {
+      await sb.auth.exchangeCodeForSession(window.location.href);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (window.location.hash && window.location.hash.includes("access_token")) {
+      await sb.auth.getSession();
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
+  } catch (e) {
+    console.error("Auth redirect handling failed", e);
+  }
+
+  try {
+    var session = await sb.auth.getSession();
+    if (session.data.session) {
+      currentUser = session.data.session.user;
+      restoreLocalState();
+      await loadUserProfile();
+    } else {
+      show("landing");
+    }
+  } catch (e) {
+    console.error("Initial session load failed", e);
+    show("landing");
   }
   
-  var session = await sb.auth.getSession();
-  if (session.data.session) {
-    currentUser = session.data.session.user;
-    await loadUserProfile();
-  }
-  
-  // Listen for auth changes
   sb.auth.onAuthStateChange(async function(event, session) {
     if (event === "SIGNED_IN" && session) {
       currentUser = session.user;
+      restoreLocalState();
       await loadUserProfile();
     } else if (event === "SIGNED_OUT") {
+      clearLocalState();
       currentUser = null;
       show("landing");
     }
@@ -665,7 +707,14 @@ async function handleSignup() {
   btn.disabled = true;
   btn.textContent = "Creating account...";
 
-  var result = await sb.auth.signUp({ email: email, password: password });
+  var result = await sb.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      emailRedirectTo: window.location.origin + window.location.pathname,
+      data: { name: name, gender: authGender }
+    }
+  });
 
   if (result.error) {
     errEl.textContent = result.error.message;
@@ -678,27 +727,36 @@ async function handleSignup() {
   currentUser = result.data.user;
   userName = name;
   userGender = authGender;
+  saveLocalState();
 
-  // Save profile to database
-  await sb.from("profiles").upsert({
-    id: currentUser.id,
-    name: name,
-    gender: authGender,
-    confidence_score: 20,
-    scenarios_completed: 0,
-    skill_opening: 15,
-    skill_flow: 8,
-    skill_rejection: 5,
-    skill_mindset: 20
-  });
+  // Save profile to database if possible
+  if (currentUser && currentUser.id) {
+    await sb.from("profiles").upsert({
+      id: currentUser.id,
+      name: name,
+      gender: authGender,
+      confidence_score: 20,
+      scenarios_completed: 0,
+      skill_opening: 15,
+      skill_flow: 8,
+      skill_rejection: 5,
+      skill_mindset: 20
+    });
+  }
 
-  sucEl.textContent = "Account created! Check your email to verify, then sign in.";
+  sucEl.textContent = result.data.session
+    ? "Account created! You are signed in now."
+    : "Account created! Check your email to verify, then sign in.";
   sucEl.classList.add("show");
   btn.disabled = false;
   btn.textContent = "Create My Account";
 
-  // Go to onboarding after short delay
-  setTimeout(function() { show("onboarding"); }, 1500);
+  if (result.data.session) {
+    setTimeout(function() { show("onboarding"); }, 900);
+  } else {
+    switchTab("login");
+    document.getElementById("loginEmail").value = email;
+  }
 }
 
 async function handleLogin() {
@@ -728,33 +786,71 @@ async function handleLogin() {
 }
 
 async function loadUserProfile() {
+  if (!currentUser || !currentUser.id) {
+    show("auth");
+    return;
+  }
+
   var result = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
+  var p = result.data;
 
-  if (result.data && result.data.name) {
-    var p = result.data;
-    userName = p.name || "";
-    userGender = p.gender || "";
-    confScore = p.confidence_score || 20;
+  if (!p) {
+    var meta = currentUser.user_metadata || {};
+    userName = meta.name || userName || currentUser.email || "User";
+    userGender = meta.gender || userGender || "";
+    confScore = 20;
 
-    // Update UI
-    document.getElementById("sbAvatar").textContent = (userName[0] || "U").toUpperCase();
-    document.getElementById("sbName").textContent = userName;
-    document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
-    document.getElementById("confVal").textContent = confScore;
-    document.getElementById("confFill").style.width = confScore + "%";
+    await sb.from("profiles").upsert({
+      id: currentUser.id,
+      name: userName,
+      gender: userGender,
+      confidence_score: 20,
+      scenarios_completed: 0,
+      skill_opening: 15,
+      skill_flow: 8,
+      skill_rejection: 5,
+      skill_mindset: 20
+    });
 
-    // Load skills
-    setSkill("s1", p.skill_opening || 15);
-    setSkill("s2", p.skill_flow || 8);
-    setSkill("s3", p.skill_rejection || 5);
-    setSkill("s4", p.skill_mindset || 20);
+    restoreLocalState();
+    updateProfileUI({
+      name: userName,
+      gender: userGender,
+      confidence_score: 20,
+      skill_opening: 15,
+      skill_flow: 8,
+      skill_rejection: 5,
+      skill_mindset: 20
+    });
+    show("onboarding");
+    return;
+  }
 
+  userName = p.name || currentUser.user_metadata && currentUser.user_metadata.name || "User";
+  userGender = p.gender || currentUser.user_metadata && currentUser.user_metadata.gender || "";
+  confScore = p.confidence_score || 20;
+  restoreLocalState();
+  updateProfileUI(p);
+
+  if (currentMode) {
     show("chat");
-    setTimeout(function() { loadSc("approach"); }, 300);
+    setTimeout(function() { loadSc(currentSc || "approach"); }, 300);
   } else {
-    // New user or profile not saved yet
     show("onboarding");
   }
+}
+
+function updateProfileUI(p) {
+  document.getElementById("sbAvatar").textContent = (userName[0] || "U").toUpperCase();
+  document.getElementById("sbName").textContent = userName;
+  document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
+  document.getElementById("confVal").textContent = confScore;
+  document.getElementById("confFill").style.width = confScore + "%";
+  setSkill("s1", p.skill_opening || 15);
+  setSkill("s2", p.skill_flow || 8);
+  setSkill("s3", p.skill_rejection || 5);
+  setSkill("s4", p.skill_mindset || 20);
+  saveLocalState();
 }
 
 function setSkill(id, val) {
@@ -785,10 +881,13 @@ async function saveProgress() {
 
 async function handleLogout() {
   await saveProgress();
+  clearLocalState();
   await sb.auth.signOut();
   currentUser = null;
   userName = "";
   userGender = "";
+  currentMode = "";
+  currentSc = "approach";
   show("landing");
 }
 
@@ -802,6 +901,7 @@ function pickMode(btn, m) {
 function beginJourney() {
   if (!currentMode) { alert("Please select what you want to work on!"); return; }
   currentSc = currentMode;
+  saveLocalState();
   document.getElementById("sbAvatar").textContent = (userName[0] || "U").toUpperCase();
   document.getElementById("sbName").textContent = userName;
   document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
@@ -836,7 +936,7 @@ function setQR(arr) {
 }
 
 function useQR(btn) { document.getElementById("msgInput").value = btn.textContent; document.getElementById("qrRow").innerHTML = ""; sendMsg(); }
-function switchSc(item, sc) { document.querySelectorAll(".sc-item").forEach(function(i) { i.classList.remove("active"); }); item.classList.add("active"); scCount++; document.getElementById("stSc").textContent = scCount; loadSc(sc); }
+function switchSc(item, sc) { document.querySelectorAll(".sc-item").forEach(function(i) { i.classList.remove("active"); }); item.classList.add("active"); scCount++; document.getElementById("stSc").textContent = scCount; currentSc = sc; saveLocalState(); loadSc(sc); }
 function tryChallenge() { document.getElementById("msgInput").value = "Let us practice the weekly challenge"; sendMsg(); }
 function resetSession() { loadSc(currentSc); }
 function doNextSc() { document.getElementById("complete-overlay").classList.remove("show"); var keys = Object.keys(SC); loadSc(keys[(keys.indexOf(currentSc) + 1) % keys.length]); }
@@ -851,18 +951,31 @@ function buildPrompt() {
 // ── API ──
 async function callAI(msg) {
   chatHistory.push({ role: "user", content: msg });
-  var resp = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: chatHistory, system: buildPrompt() })
-  });
-  if (!resp.ok) {
-    var e = await resp.json().catch(function() { return {}; });
+  var resp;
+  try {
+    resp = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: chatHistory, system: buildPrompt() })
+    });
+  } catch (networkError) {
     chatHistory.pop();
-    throw new Error(e.error ? e.error.message : "Error " + resp.status);
+    throw new Error("Could not reach /api/chat. Make sure your Netlify function or backend is deployed.");
   }
-  var data = await resp.json();
-  var reply = data.content[0].text;
+
+  var data = await resp.json().catch(function() { return {}; });
+  if (!resp.ok) {
+    chatHistory.pop();
+    var errMsg = (data && data.error && (data.error.message || data.error)) || data.message || ("Error " + resp.status);
+    throw new Error(errMsg);
+  }
+
+  var reply = extractReplyText(data);
+  if (!reply) {
+    chatHistory.pop();
+    throw new Error("AI response format was not recognized. Expected text, but got: " + JSON.stringify(data).slice(0, 180));
+  }
+
   chatHistory.push({ role: "assistant", content: reply });
   return reply;
 }
