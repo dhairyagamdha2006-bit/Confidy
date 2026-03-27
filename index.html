@@ -602,11 +602,34 @@ function show(id) {
 
 // ── CHECK AUTH ON LOAD ──
 window.addEventListener("load", async function() {
+  // Handle email confirmation redirect
+  var hash = window.location.hash;
+  if (hash && hash.includes("access_token")) {
+    var result = await sb.auth.getSession();
+    if (result.data.session) {
+      currentUser = result.data.session.user;
+      window.location.hash = "";
+      await loadUserProfile();
+      return;
+    }
+  }
+  
   var session = await sb.auth.getSession();
   if (session.data.session) {
     currentUser = session.data.session.user;
     await loadUserProfile();
   }
+  
+  // Listen for auth changes
+  sb.auth.onAuthStateChange(async function(event, session) {
+    if (event === "SIGNED_IN" && session) {
+      currentUser = session.user;
+      await loadUserProfile();
+    } else if (event === "SIGNED_OUT") {
+      currentUser = null;
+      show("landing");
+    }
+  });
 });
 
 // ── AUTH ──
@@ -707,14 +730,14 @@ async function handleLogin() {
 async function loadUserProfile() {
   var result = await sb.from("profiles").select("*").eq("id", currentUser.id).single();
 
-  if (result.data) {
+  if (result.data && result.data.name) {
     var p = result.data;
-    userName = p.name;
-    userGender = p.gender;
+    userName = p.name || "";
+    userGender = p.gender || "";
     confScore = p.confidence_score || 20;
 
     // Update UI
-    document.getElementById("sbAvatar").textContent = userName[0].toUpperCase();
+    document.getElementById("sbAvatar").textContent = (userName[0] || "U").toUpperCase();
     document.getElementById("sbName").textContent = userName;
     document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
     document.getElementById("confVal").textContent = confScore;
@@ -727,9 +750,9 @@ async function loadUserProfile() {
     setSkill("s4", p.skill_mindset || 20);
 
     show("chat");
-    loadSc("approach");
+    setTimeout(function() { loadSc("approach"); }, 300);
   } else {
-    // New user — go to onboarding
+    // New user or profile not saved yet
     show("onboarding");
   }
 }
@@ -778,11 +801,12 @@ function pickMode(btn, m) {
 
 function beginJourney() {
   if (!currentMode) { alert("Please select what you want to work on!"); return; }
-  document.getElementById("sbAvatar").textContent = userName[0].toUpperCase();
+  currentSc = currentMode;
+  document.getElementById("sbAvatar").textContent = (userName[0] || "U").toUpperCase();
   document.getElementById("sbName").textContent = userName;
   document.getElementById("msgInput").placeholder = "Type what you would say, " + userName + "...";
   show("chat");
-  loadSc(currentMode);
+  setTimeout(function() { loadSc(currentSc); }, 300);
 }
 
 // ── SCENARIOS ──
