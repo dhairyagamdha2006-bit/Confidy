@@ -270,7 +270,24 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
 .save-indicator.show { opacity: 1; }
 
 @media (max-width: 1100px) { .right-panel { display: none; } }
-@media (max-width: 720px) { .sidebar { display: none; } .nav { padding: 1rem 1.5rem; } .hero { grid-template-columns: 1fr; } .hero-right { display: none; } .hero-left { padding: 6rem 1.5rem 4rem; } .gender-section { grid-template-columns: 1fr; } .phases-grid { grid-template-columns: 1fr; } .hero-stats { gap: 2rem; padding: 2rem 1.5rem; flex-wrap: wrap; } }
+@media (max-width: 720px) {
+  .sidebar { display: none; }
+  .nav { padding: 1rem 1.5rem; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-right { display: none; }
+  .hero-left { padding: 6rem 1.5rem 4rem; }
+  .gender-section { grid-template-columns: 1fr; }
+  .phases-grid { grid-template-columns: 1fr; }
+  .hero-stats { gap: 2rem; padding: 2rem 1.5rem; flex-wrap: wrap; }
+  #dashboard { padding: 1rem !important; }
+  #dashboard > div > div { padding: 1rem !important; }
+  #dashboard [style*="grid-template-columns:1.1fr"] { grid-template-columns: 1fr !important; }
+  #dashboard [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2, 1fr) !important; }
+  #dashboard [style*="grid-template-columns:repeat(3"] { grid-template-columns: 1fr !important; }
+  .auth-container { padding: 1rem; }
+  #onboarding { padding: 1rem; }
+  .ob-card { padding: 1.25rem; }
+}
 </style>
 </head>
 <body>
@@ -851,8 +868,18 @@ function renderDashboardHistory(conversations) {
 }
 
 async function loadDashboard() {
+  // Show dashboard immediately with loading state
+  show("dashboard");
+  var welcomeEl = document.getElementById("dashWelcome");
+  if (welcomeEl) welcomeEl.textContent = "Loading your progress...";
+  var histEl = document.getElementById("dashHistoryList");
+  if (histEl) histEl.innerHTML = "<div style='padding:1rem;border:1px solid rgba(255,255,255,0.08);border-radius:14px;background:#111827;color:#9ca3af;font-size:0.9rem;'>Loading sessions...</div>";
+
   var stats = await getDashboardStats();
-  if (!stats) return;
+  if (!stats) {
+    if (welcomeEl) welcomeEl.textContent = "Could not load profile. Try refreshing.";
+    return;
+  }
 
   var profile = stats.profile || {};
   var conversations = stats.conversations || [];
@@ -863,7 +890,7 @@ async function loadDashboard() {
     ? "Resume where you left off, review your recent sessions, or start a fresh one."
     : "You are ready to begin your next coaching session.";
 
-  document.getElementById("dashConfidence").textContent = profile["Confidence_Score"] || 0;
+  document.getElementById("dashConfidence").textContent = profile["confidence_score"] || profile["Confidence_Score"] || 0;
   document.getElementById("dashCompleted").textContent = profile.scenarios_completed || 0;
   document.getElementById("dashSessions").textContent = conversations.length || 0;
   document.getElementById("dashScenario").textContent = latest ? latest.scenario_label : "None yet";
@@ -882,7 +909,7 @@ async function loadDashboard() {
   document.getElementById("dashRecommendation").textContent = recommendation;
 
   renderDashboardHistory(conversations);
-  show("dashboard");
+  // Dashboard already shown at start of this function
 }
 
 async function resumeLatestSession() {
@@ -1264,7 +1291,7 @@ async function handleSignup() {
       id: currentUser.id,
       name: name,
       gender: authGender,
-      "Confidence_Score": 20,
+      "confidence_score": 20,
       scenarios_completed: 0,
       skill_opening: 15,
       skill_flow: 8,
@@ -1393,7 +1420,7 @@ async function loadUserProfile() {
       id: currentUser.id,
       name: userName,
       gender: userGender,
-      "Confidence_Score": 20,
+      "confidence_score": 20,
       scenarios_completed: 0,
       skill_opening: 15,
       skill_flow: 8,
@@ -1417,7 +1444,7 @@ async function loadUserProfile() {
 
   userName = p.name || (currentUser.user_metadata && currentUser.user_metadata.name) || "User";
   userGender = p.gender || (currentUser.user_metadata && currentUser.user_metadata.gender) || "";
-  confScore = p["Confidence_Score"] || 20;
+  confScore = p["confidence_score"] || p["Confidence_Score"] || 20;
   currentSc = p.selected_scenario || currentSc || "approach";
   scCount = p.scenarios_completed || scCount || 1;
   restoreLocalState();
@@ -1476,7 +1503,7 @@ async function saveProgress() {
   saveLocalState();
 
   await sb.from("profiles").update({
-    "Confidence_Score": confScore,
+    "confidence_score": confScore,
     scenarios_completed: scCount,
     skill_opening: s1,
     skill_flow: s2,
@@ -1530,10 +1557,16 @@ function loadSc(sc) {
   currentSc = sc;
   chatHistory = [];
   msgCount = 0;
+  // Snapshot confScore before scenario switch to prevent drift
+  var snappedScore = confScore;
   setActiveScenarioNav(sc);
   document.getElementById("msgs").innerHTML = "";
   document.getElementById("stMsgs").textContent = "0";
   document.getElementById("stSc").textContent = scCount;
+  // Restore score snapshot so switching scenarios doesn't reset it
+  confScore = snappedScore;
+  document.getElementById("confVal").textContent = confScore;
+  document.getElementById("confFill").style.width = confScore + "%";
 
   var s = SC[sc] || SC.approach;
   document.getElementById("scTagBadge").textContent = s.tag;
@@ -1725,7 +1758,7 @@ async function sendMsg() {
     addMsg("ai", reply);
     await saveMessageRecord("assistant", reply);
     setStatus("Your turn. What do you say?");
-    bumpConf(Math.floor(Math.random() * 4) + 2); bumpSkills();
+    bumpConf(Math.floor(Math.random() * 4) + 2); bumpSkills(reply);
     await saveProgress();
     if (msgCount === 10) {
       document.getElementById("stScore").textContent = confScore;
@@ -1783,12 +1816,40 @@ function bumpConf(d) {
   document.getElementById("sbLevel").innerHTML = lv;
 }
 
-function bumpSkills() {
-  [["s1",3],["s2",2],["s3",1],["s4",2]].forEach(function(p) {
-    var el = document.getElementById(p[0]);
-    var v = Math.min(100, parseInt(el.style.width) + (Math.random() > 0.5 ? p[1] : 0));
-    el.style.width = v + "%";
-    document.getElementById(p[0] + "v").textContent = v + "%";
+function bumpSkills(aiReply) {
+  // Read the AI reply to decide WHICH skill to bump and by HOW MUCH
+  var reply = (aiReply || "").toLowerCase();
+
+  // Detect green/strong rating — bump more
+  var isPositive = reply.indexOf("green") > -1 || reply.indexOf("strong") > -1 || reply.indexOf("great") > -1 || reply.indexOf("excellent") > -1 || reply.indexOf("well done") > -1;
+  // Detect red/needs work — bump less or not at all
+  var isNegative = reply.indexOf("red") > -1 || reply.indexOf("needs work") > -1 || reply.indexOf("avoid") > -1 || reply.indexOf("too short") > -1;
+
+  var bump = isPositive ? 4 : isNegative ? 0 : 2;
+
+  // Detect which skill the feedback is about
+  var skillBumps = [0, 0, 0, 0]; // s1=opening, s2=flow, s3=rejection, s4=mindset
+
+  if (reply.indexOf("opening") > -1 || reply.indexOf("opener") > -1 || reply.indexOf("first line") > -1 || reply.indexOf("approach") > -1) {
+    skillBumps[0] = bump;
+  } else if (reply.indexOf("flow") > -1 || reply.indexOf("follow") > -1 || reply.indexOf("conversation") > -1 || reply.indexOf("keep") > -1) {
+    skillBumps[1] = bump;
+  } else if (reply.indexOf("rejection") > -1 || reply.indexOf("reject") > -1 || reply.indexOf("resilience") > -1 || reply.indexOf("hurt") > -1) {
+    skillBumps[2] = bump;
+  } else if (reply.indexOf("mindset") > -1 || reply.indexOf("frame") > -1 || reply.indexOf("confident") > -1 || reply.indexOf("belief") > -1) {
+    skillBumps[3] = bump;
+  } else {
+    // Generic bump — give a small boost to one random skill
+    skillBumps[Math.floor(Math.random() * 4)] = Math.max(1, bump - 1);
+  }
+
+  ["s1","s2","s3","s4"].forEach(function(id, i) {
+    if (skillBumps[i] > 0) {
+      var el = document.getElementById(id);
+      var v = Math.min(100, parseInt(el.style.width) + skillBumps[i]);
+      el.style.width = v + "%";
+      document.getElementById(id + "v").textContent = v + "%";
+    }
   });
 }
 </script>
