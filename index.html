@@ -719,6 +719,7 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
 const SUPABASE_URL = "https://rogkdkdutzcidfjmrdwh.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvZ2tka2R1dHpjaWRmam1yZHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1ODk0MzUsImV4cCI6MjA5MDE2NTQzNX0.LLL_I-4mLg7No3uuy9Rq3b4BdqQBTpxFrpkOc8HjGTE";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const PYTHON_API_URL = "https://confidy-nlp-api.onrender.com";
 
 // ── STATE ──
 var userName = "", userGender = "", currentMode = "", currentSc = "approach";
@@ -1726,96 +1727,202 @@ async function callAITransient(instruction) {
 }
 
 // ── PYTHON SCORING ENGINE ──
-async function callScoreEngine(aiReply) {
-  try {
-    var userMessages = chatHistory.filter(function(m) {
-      return m.role === "user" && m.content.indexOf("[SYSTEM") !== 0;
-    });
-
-    if (userMessages.length < 1) return;
-
-    var resp = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scoreOnly: true,
-        messages: chatHistory.filter(function(m) { return m.content.indexOf("[SYSTEM") !== 0; }),
-        scenario: currentSc
-      })
-    });
-
-    if (!resp.ok) return;
-    var scores = await resp.json();
-    if (!scores || scores.error) return;
-
-    // Apply real scores from Python NLP engine
-    applyRealScores(scores, aiReply);
-
-  } catch (e) {
-    // Silently fall back to bump-based scoring if Python engine fails
-    bumpSkills(aiReply);
-  }
+function clamp(val, min, max) {
+  return Math.max(min, Math.min(max, val));
 }
 
-function applyRealScores(scores, aiReply) {
-  // Smoothly transition to real scores — blend current with new
-  var skillMap = [
-    { id: "s1", key: "opening",   label: "s1v" },
-    { id: "s2", key: "flow",      label: "s2v" },
-    { id: "s3", key: "rejection", label: "s3v" },
-    { id: "s4", key: "mindset",   label: "s4v" }
-  ];
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, function(ch) {
+    return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+  });
+}
 
-  skillMap.forEach(function(skill) {
-    var newVal = scores[skill.key];
-    if (typeof newVal !== "number") return;
+function buildPythonConversation() {
+  return chatHistory
+    .filter(function(m) { return m && m.role && typeof m.content === "string" && m.content.indexOf("[SYSTEM") !== 0; })
+    .map(function(m) { return { role: m.role, content: m.content }; });
+}
 
-    var el = document.getElementById(skill.id);
-    var current = parseInt(el.style.width) || 0;
-
-    // Blend: 70% new score, 30% current — smooth transition
-    var blended = Math.round((newVal * 0.7) + (current * 0.3));
-    var final = Math.max(0, Math.min(100, blended));
-
-    el.style.width = final + "%";
-    document.getElementById(skill.label).textContent = final + "%";
+async function fetchPythonJSON(path, payload) {
+  var resp = await fetch(PYTHON_API_URL + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {})
   });
 
-  // Show a score badge in the chat based on overall score
-  var overall = scores.overall || 0;
-  showScoreBadge(overall, aiReply);
+  var data = await resp.json().catch(function() { return {}; });
+  if (!resp.ok) {
+    var errMsg = (data && data.error) || ("Python API error " + resp.status);
+    throw new Error(errMsg);
+  }
+  return data;
 }
 
-function showScoreBadge(overall, aiReply) {
-  // Detect rating from AI reply text
-  var reply = (aiReply || "").toLowerCase();
-  var isGreen = reply.indexOf("green") > -1 || reply.indexOf("strong") > -1 || overall >= 65;
-  var isRed = reply.indexOf("red") > -1 || reply.indexOf("needs work") > -1 || overall < 35;
+function setSkillValue(id, labelId, value) {
+  var safe = clamp(Math.round(Number(value) || 0), 0, 100);
+  document.getElementById(id).style.width = safe + "%";
+  document.getElementById(labelId).textContent = safe + "%";
+}
 
-  var color = isGreen ? "var(--green)" : isRed ? "var(--red)" : "var(--gold)";
-  var label = isGreen ? "Strong" : isRed ? "Needs Work" : "Decent";
-  var icon = isGreen ? "🟢" : isRed ? "🔴" : "🟡";
+function applyOverallConfidence(overall, blend) {
+  var current = Number(confScore) || 20;
+  var target = clamp(Math.round(Number(overall) || current), 0, 100);
+  confScore = blend === false ? target : clamp(Math.round(target * 0.45 + current * 0.55), 0, 100);
+  document.getElementById("confVal").textContent = confScore;
+  document.getElementById("confFill").style.width = confScore + "%";
 
-  // Update confidence score based on NLP result
-  if (isGreen) {
-    bumpConf(Math.floor(Math.random() * 4) + 3);
-  } else if (isRed) {
-    bumpConf(1);
-  } else {
-    bumpConf(2);
+  var lv = confScore < 30 ? "&#128293; Confidence Beginner" :
+           confScore < 50 ? "&#9889; Rising Challenger" :
+           confScore < 70 ? "&#128142; Confident Communicator" :
+           confScore < 90 ? "&#127885; Social Master" :
+           "&#128081; Confidence Legend";
+  document.getElementById("sbLevel").innerHTML = lv;
+}
+
+function applyScorePayload(scores, options) {
+  options = options || {};
+  var blend = options.blend !== false;
+  var currentSkills = {
+    opening: parseInt(document.getElementById("s1").style.width, 10) || 15,
+    flow: parseInt(document.getElementById("s2").style.width, 10) || 8,
+    rejection: parseInt(document.getElementById("s3").style.width, 10) || 5,
+    mindset: parseInt(document.getElementById("s4").style.width, 10) || 20
+  };
+
+  var nextSkills = {
+    opening: blend ? Math.round((Number(scores.opening || currentSkills.opening) * 0.7) + (currentSkills.opening * 0.3)) : Number(scores.opening || currentSkills.opening),
+    flow: blend ? Math.round((Number(scores.flow || currentSkills.flow) * 0.7) + (currentSkills.flow * 0.3)) : Number(scores.flow || currentSkills.flow),
+    rejection: blend ? Math.round((Number(scores.rejection || currentSkills.rejection) * 0.7) + (currentSkills.rejection * 0.3)) : Number(scores.rejection || currentSkills.rejection),
+    mindset: blend ? Math.round((Number(scores.mindset || currentSkills.mindset) * 0.7) + (currentSkills.mindset * 0.3)) : Number(scores.mindset || currentSkills.mindset)
+  };
+
+  setSkillValue("s1", "s1v", nextSkills.opening);
+  setSkillValue("s2", "s2v", nextSkills.flow);
+  setSkillValue("s3", "s3v", nextSkills.rejection);
+  setSkillValue("s4", "s4v", nextSkills.mindset);
+
+  applyOverallConfidence(scores.overall, !blend ? false : true);
+
+  if (scores.rewrite_suggestion) {
+    document.getElementById("tipTxt").textContent = "Rewrite suggestion: " + scores.rewrite_suggestion;
   }
 
-  // Flash the save indicator briefly with the score
+  if (scores.badge || typeof scores.overall === "number") {
+    showScoreBadge(scores);
+  }
+}
+
+function showScoreBadge(scores) {
+  var badgeText = scores.badge || (Number(scores.overall || 0) >= 65 ? "🟢 Strong (" + scores.overall + "/100)" : Number(scores.overall || 0) < 35 ? "🔴 Needs Work (" + scores.overall + "/100)" : "🟡 Mixed (" + scores.overall + "/100)");
+  var lower = badgeText.toLowerCase();
+  var color = lower.indexOf("strong") > -1 ? "var(--green)" : lower.indexOf("need") > -1 ? "var(--red)" : "var(--gold)";
+
   var ind = document.getElementById("saveIndicator");
   if (ind) {
-    ind.innerHTML = icon + " " + label + " (" + overall + "/100)";
+    ind.innerHTML = escapeHtml(badgeText);
     ind.style.color = color;
     ind.classList.add("show");
     setTimeout(function() {
       ind.classList.remove("show");
       ind.innerHTML = "&#10003; Progress Saved";
       ind.style.color = "";
-    }, 3000);
+    }, 3200);
+  }
+}
+
+function formatReasonLines(reasonsObj) {
+  if (!reasonsObj || typeof reasonsObj !== "object") return "";
+  var order = ["opening", "flow", "rejection", "mindset"];
+  var labels = { opening: "Opening", flow: "Flow", rejection: "Rejection", mindset: "Mindset" };
+  var lines = [];
+  order.forEach(function(key) {
+    var vals = reasonsObj[key];
+    if (Array.isArray(vals) && vals.length) {
+      lines.push(labels[key] + ": " + vals[0]);
+    }
+  });
+  return lines.join("\n");
+}
+
+function formatSessionSummaryForChat(scoreData, summaryData) {
+  var parts = ["[COACHING FEEDBACK]"];
+  if (scoreData && scoreData.badge) parts.push("Session Score: " + scoreData.badge);
+  if (summaryData && summaryData.summary) parts.push(summaryData.summary);
+
+  var strengths = summaryData && (summaryData.strengths || summaryData.what_went_well);
+  if (Array.isArray(strengths) && strengths.length) {
+    parts.push("Strengths:\n- " + strengths.slice(0, 2).join("\n- "));
+  }
+
+  var weaknesses = summaryData && (summaryData.weaknesses || summaryData.improvements || summaryData.areas_to_improve);
+  if (Array.isArray(weaknesses) && weaknesses.length) {
+    parts.push("Needs Work:\n- " + weaknesses.slice(0, 2).join("\n- "));
+  }
+
+  var rewrite = (summaryData && (summaryData.rewrite_suggestion || summaryData.rewrite)) || (scoreData && scoreData.rewrite_suggestion);
+  if (rewrite) parts.push("Better Rewrite: " + rewrite);
+
+  var reasons = formatReasonLines(scoreData && scoreData.reasons);
+  if (reasons) parts.push(reasons);
+
+  return parts.join("\n\n");
+}
+
+function buildOverlaySummaryHtml(scoreData, summaryData) {
+  var sections = [];
+  if (scoreData && scoreData.badge) sections.push("<strong>" + escapeHtml(scoreData.badge) + "</strong>");
+  if (summaryData && summaryData.summary) sections.push(escapeHtml(summaryData.summary));
+
+  var strengths = summaryData && (summaryData.strengths || summaryData.what_went_well);
+  if (Array.isArray(strengths) && strengths.length) {
+    sections.push("<strong>Strengths:</strong> " + escapeHtml(strengths.slice(0, 2).join(" • ")));
+  }
+
+  var weaknesses = summaryData && (summaryData.weaknesses || summaryData.improvements || summaryData.areas_to_improve);
+  if (Array.isArray(weaknesses) && weaknesses.length) {
+    sections.push("<strong>Improve next:</strong> " + escapeHtml(weaknesses.slice(0, 2).join(" • ")));
+  }
+
+  var rewrite = (summaryData && (summaryData.rewrite_suggestion || summaryData.rewrite)) || (scoreData && scoreData.rewrite_suggestion);
+  if (rewrite) sections.push("<strong>Suggested rewrite:</strong> " + escapeHtml(rewrite));
+
+  return sections.join("<br><br>");
+}
+
+async function callAnalyzeMessage(latestMessage) {
+  return fetchPythonJSON("/analyze-message", {
+    scenario: currentSc,
+    latest_message: latestMessage,
+    conversation: buildPythonConversation()
+  });
+}
+
+async function callScoreSession() {
+  return fetchPythonJSON("/score-session", {
+    scenario: currentSc,
+    messages: buildPythonConversation()
+  });
+}
+
+async function callSessionSummary() {
+  return fetchPythonJSON("/session-summary", {
+    scenario: currentSc,
+    messages: buildPythonConversation()
+  });
+}
+
+async function callScoreEngine(latestMessage) {
+  try {
+    var userMessages = chatHistory.filter(function(m) {
+      return m.role === "user" && m.content.indexOf("[SYSTEM") !== 0;
+    });
+    if (userMessages.length < 1) return null;
+    var scores = await callAnalyzeMessage(latestMessage);
+    applyScorePayload(scores, { blend: true });
+    return scores;
+  } catch (e) {
+    console.error("Python scoring unavailable", e);
+    return null;
   }
 }
 
@@ -1852,18 +1959,33 @@ async function sendMsg() {
     addMsg("ai", reply);
     await saveMessageRecord("assistant", reply);
     setStatus("Your turn. What do you say?");
-    // Call Python NLP scoring engine
-    await callScoreEngine(reply);
+    await callScoreEngine(txt);
     await saveProgress();
+
     if (msgCount === 10) {
+      var sessionScore = null;
+      var sessionSummary = null;
+      try {
+        sessionScore = await callScoreSession();
+        sessionSummary = await callSessionSummary();
+        if (sessionScore) applyScorePayload(sessionScore, { blend: false });
+      } catch (summaryErr) {
+        console.error("Session summary failed", summaryErr);
+      }
+
       document.getElementById("stScore").textContent = confScore;
-      document.getElementById("compMsg").textContent = "Amazing work, " + userName + "! You completed a full session with " + msgCount + " exchanges.";
+      document.getElementById("compMsg").innerHTML = buildOverlaySummaryHtml(sessionScore, sessionSummary) || ("Amazing work, " + escapeHtml(userName) + "! You completed a full session with " + msgCount + " exchanges.");
       await saveProgress();
       await finishConversationRecord();
       setTimeout(function() { document.getElementById("complete-overlay").classList.add("show"); }, 1800);
     }
-  } catch (e) { hideTyping(); showErr(e.message); setStatus("Ready"); }
-  busy = false; document.getElementById("sendBtn").disabled = false;
+  } catch (e) {
+    hideTyping();
+    showErr(e.message);
+    setStatus("Ready");
+  }
+  busy = false;
+  document.getElementById("sendBtn").disabled = false;
   document.getElementById("msgInput").focus();
 }
 
@@ -1871,9 +1993,20 @@ async function getAnalysis() {
   if (msgCount < 2) { addMsg("ai", userName + ", we need at least a couple of exchanges first!"); return; }
   showTyping(); setStatus("Generating full analysis...");
   try {
-    var a = await callAITransient("[SYSTEM: Give " + userName + " a comprehensive performance review. Cover: 1) What they did well, 2) Top 2 areas to improve, 3) Strongest moment, 4) One specific drill for this week.]");
-    hideTyping(); addMsg("ai", a); setStatus("Analysis complete");
-  } catch (e) { hideTyping(); showErr(e.message); setStatus("Ready"); }
+    var scoreData = await callScoreSession();
+    var summaryData = await callSessionSummary();
+    hideTyping();
+    if (scoreData) applyScorePayload(scoreData, { blend: false });
+    addMsg("ai", formatSessionSummaryForChat(scoreData, summaryData));
+    setStatus("Analysis complete");
+  } catch (e) {
+    try {
+      var fallback = await callAITransient("[SYSTEM: Give " + userName + " a comprehensive performance review. Cover: 1) What they did well, 2) Top 2 areas to improve, 3) Strongest moment, 4) One specific drill for this week.]");
+      hideTyping(); addMsg("ai", fallback); setStatus("Analysis complete");
+    } catch (fallbackError) {
+      hideTyping(); showErr(fallbackError.message); setStatus("Ready");
+    }
+  }
 }
 
 // ── UI HELPERS ──
