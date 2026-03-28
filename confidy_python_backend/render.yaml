@@ -2,6 +2,21 @@ services:
   - type: web
     name: confidy-nlp-api
     env: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+```
+
+Then **also update `requirements.txt`** in GitHub → `confidy_python_backend/requirements.txt` → replace with:
+```
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+pydantic==2.11.4
+sentence-transformers==3.4.1
+scikit-learn==1.6.1
+vaderSentiment==3.3.2
+numpy==1.26.4
+torch==2.2.2
