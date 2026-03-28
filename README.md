@@ -92,7 +92,7 @@ Confidy currently focuses on communication and confidence training in scenarios 
 
 ---
 
-## Architecture
+```text ## Architecture
 
 
 Confidy
