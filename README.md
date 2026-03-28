@@ -94,7 +94,6 @@ Confidy currently focuses on communication and confidence training in scenarios 
 
 ## Architecture
 
-```text
 Confidy
 ├── Frontend (HTML/CSS/JS)
 │   ├── Landing page
