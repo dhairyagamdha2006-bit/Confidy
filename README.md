@@ -112,3 +112,68 @@ Confidy
 │   ├── Profiles
 │   ├── Conversations
 │   └── Messages
+
+## Deployment
+
+### Frontend
+The frontend is deployed on **Netlify**.
+
+### Python Backend
+The NLP backend is deployed separately on **Render**.
+
+---
+
+## Why I Built This
+
+Confidy was built to make communication growth measurable, interactive, and practical.
+
+A lot of advice around confidence is vague. Confidy turns it into something users can actually train:
+
+- practice conversations
+- get immediate coaching
+- track progress over time
+- improve through repeated sessions
+
+The goal is to make confidence feel trainable, not mysterious.
+
+---
+
+## Current Highlights
+
+- Full authentication and password reset flow
+- Real-time AI coaching
+- Persistent chat/session storage
+- Session dashboard and history management
+- Delete session history support
+- Python-powered scoring and summaries
+- Personalized rewrite suggestions
+
+---
+
+## Future Improvements
+
+- Stronger dashboard analytics and graphs
+- More advanced NLP scoring
+- Richer session summaries
+- More scenario variety
+- Better modular frontend structure
+- Multi-model AI routing
+- Long-term progress insights across sessions
+
+---
+
+## Resume Summary
+
+**Built Confidy, an AI-powered confidence coaching web app that combines realistic conversation practice, live feedback, session persistence, and Python-based language analysis to help users improve communication skills and track measurable growth over time.**
+
+---
+
+## Author
+
+**Dhairya Gamdha**
+
+---
+
+## License
+
+This project is for educational and portfolio purposes.
