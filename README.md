@@ -111,19 +111,6 @@ Confidy
      Conversations
      Messages
 
-.
-├── index.html
-├── netlify.toml
-├── netlify/
-│   └── functions/
-│       └── chat.js
-├── confidy_python_backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── nlp_engine.py
-│   │   └── schemas.py
-│   ├── requirements.txt
-│   └── render.yaml
 
 ## Deployment
 
