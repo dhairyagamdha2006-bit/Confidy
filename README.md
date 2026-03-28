@@ -95,22 +95,21 @@ Confidy currently focuses on communication and confidence training in scenarios 
 ## Architecture
 
 Confidy
-├── Frontend (HTML/CSS/JS)
-│   ├── Landing page
-│   ├── Auth flow
-│   ├── Dashboard
-│   ├── Chat UI
-│   └── Skill tracking
-│
-├── Backend
-│   ├── Netlify Function for AI chat
-│   └── Python FastAPI service for scoring + summaries
-│
-├── Data Layer
-│   ├── Supabase Auth
-│   ├── Profiles
-│   ├── Conversations
-│   └── Messages
+     Frontend (HTML/CSS/JS) - 
+     Landing page
+     Auth flow
+     Dashboard
+     Chat UI
+     Skill tracking
+     
+     Backend
+     Netlify Function for AI chat
+     Python FastAPI service for scoring + summaries
+     Data Layer
+     Supabase Auth
+     Profiles
+     Conversations
+     Messages
 
 .
 ├── index.html
