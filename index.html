@@ -3,7 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Confidy — Own Every Room</title>
+<title>Confidy — AI Confidence Coaching for Real-World Conversations</title>
+<meta name="description" content="Confidy is an AI confidence coach for real-world conversations. Practice social scenarios, track progress, review session history, and build confidence with personalized coaching.">
+<meta name="keywords" content="AI confidence coach, conversation practice, social confidence, communication coaching, rejection recovery, texting practice">
+<meta name="author" content="Confidy">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://confidy.netlify.app/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Confidy — AI Confidence Coaching for Real-World Conversations">
+<meta property="og:description" content="Practice real-world conversations with AI coaching, progress tracking, session history, and full analysis. Style and social presence layers are coming next.">
+<meta property="og:url" content="https://confidy.netlify.app/">
+<meta property="og:site_name" content="Confidy">
+<meta property="og:image" content="https://confidy.netlify.app/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Confidy — AI Confidence Coaching for Real-World Conversations">
+<meta name="twitter:description" content="AI confidence coaching for real-world conversations, with progress tracking, session history, and full analysis.">
+<meta name="twitter:image" content="https://confidy.netlify.app/og-image.png">
+<meta name="theme-color" content="#080808">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -99,6 +115,42 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
 .footer-logo { font-family: "Bebas Neue", sans-serif; font-size: 1.4rem; letter-spacing: 0.15em; color: var(--gold); }
 .footer-logo span { color: var(--cream); }
 .footer p { font-size: 0.75rem; color: var(--muted); }
+.hero-proof { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin: 0 0 2.2rem; max-width: 560px; }
+.proof-chip { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; }
+.proof-chip strong { display: block; color: var(--cream); font-size: 0.84rem; font-weight: 500; margin-bottom: 0.2rem; }
+.proof-chip span { display: block; color: var(--muted); font-size: 0.74rem; line-height: 1.5; }
+.mini-note { margin-top: 1rem; font-size: 0.72rem; color: var(--mid); max-width: 520px; line-height: 1.6; }
+.trust-strip { display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1.25rem; }
+.trust-pill { padding:0.42rem 0.75rem; border:1px solid rgba(201,168,76,0.22); background:rgba(201,168,76,0.06); border-radius:999px; font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold); }
+.focus-section { padding: 0 4rem 6rem; }
+.focus-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 18px; padding: 2rem; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 2rem; }
+.focus-card h3 { font-family: "Cormorant Garamond", serif; font-size: 2rem; font-weight: 300; margin-bottom: 0.7rem; }
+.focus-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.8; }
+.focus-list { list-style:none; display:grid; gap:0.65rem; }
+.focus-list li { font-size:0.82rem; color:var(--cream); display:flex; gap:0.65rem; align-items:flex-start; }
+.focus-list li::before { content:""; width:5px; height:5px; border-radius:50%; background:var(--gold); margin-top:0.45rem; flex-shrink:0; }
+.legal-section { padding: 0 4rem 6rem; }
+.legal-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:1rem; }
+.legal-card { background: rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; padding:1.4rem; }
+.legal-card h4 { font-size:0.82rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); margin-bottom:0.65rem; }
+.legal-card p { color:var(--muted); font-size:0.8rem; line-height:1.7; margin-bottom:0.75rem; }
+.legal-card a { color:var(--cream); font-size:0.8rem; text-decoration:none; border-bottom:1px solid rgba(255,255,255,0.15); }
+.footer-links { display:flex; gap:1rem; flex-wrap:wrap; justify-content:flex-end; }
+.footer-links a { color: var(--mid); text-decoration:none; font-size:0.72rem; }
+.footer-links a:hover { color: var(--gold); }
+.auth-note { margin-top: 1rem; font-size: 0.72rem; color: var(--mid); line-height: 1.6; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); z-index:500; align-items:center; justify-content:center; padding:1.5rem; }
+.modal-overlay.show { display:flex; }
+.modal-card { width:min(760px, 100%); max-height:85vh; overflow:auto; background:var(--charcoal); border:1px solid rgba(201,168,76,0.24); border-radius:20px; padding:1.75rem; }
+.modal-top { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; }
+.modal-top h3 { font-family:"Cormorant Garamond", serif; font-size:2rem; font-weight:300; }
+.modal-close { background:transparent; border:1px solid var(--border); color:var(--cream); border-radius:10px; padding:0.45rem 0.8rem; cursor:pointer; }
+.modal-card p, .modal-card li { color:var(--muted); font-size:0.88rem; line-height:1.8; }
+.modal-card h4 { color:var(--gold); font-size:0.78rem; letter-spacing:0.15em; text-transform:uppercase; margin:1.2rem 0 0.45rem; }
+.modal-card ul { padding-left:1.1rem; }
+@media (max-width: 900px) { .focus-card, .legal-grid, .hero-proof { grid-template-columns: 1fr; } .focus-section, .legal-section { padding: 0 1.5rem 4rem; } .footer { flex-direction:column; align-items:flex-start; gap:0.8rem; } .footer-links { justify-content:flex-start; } }
+
 
 /* ── AUTH SCREEN ── */
 #auth { display: flex; align-items: center; justify-content: center; background: var(--dark); overflow: hidden; }
@@ -309,13 +361,21 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
   </nav>
   <section class="hero">
     <div class="hero-left">
-      <div class="hero-eyebrow">The Confidence OS</div>
-      <h1>Own Every<br><em>Room You<br>Walk Into</em></h1>
-      <p class="hero-desc">Confidy is a complete self-transformation platform for both men and women — combining AI confidence coaching, style intelligence, and social media presence into one system.</p>
+      <div class="hero-eyebrow">Phase 1 Live Now</div>
+      <h1>AI confidence coaching<br><em>for real-world<br>conversations</em></h1>
+      <p class="hero-desc">Confidy helps you practice conversations that actually happen in real life — from first approaches to texting, group dynamics, workplace confidence, and rejection recovery. Style intelligence and social presence layers are coming next.</p>
+      <div class="hero-proof">
+        <div class="proof-chip"><strong>6 live practice scenarios</strong><span>Train across coffee shops, texting, parties, work, rejection, and more.</span></div>
+        <div class="proof-chip"><strong>Session history and dashboard</strong><span>Resume past conversations, review progress, and manage saved sessions.</span></div>
+        <div class="proof-chip"><strong>Progress tracking</strong><span>Confidence score, skill breakdowns, and scenario completion are saved to your profile.</span></div>
+        <div class="proof-chip"><strong>Full AI analysis</strong><span>Get structured feedback, rewrites, and coaching after your practice sessions.</span></div>
+      </div>
       <div class="hero-btns">
         <button class="btn-gold" onclick="show('auth')">Start Your Journey</button>
         <button class="btn-ghost-link" onclick="document.getElementById('phases-section').scrollIntoView({behavior:'smooth'})">See the 3 Phases</button>
       </div>
+      <div class="mini-note">Confidy is coaching for communication growth — not therapy, crisis support, or medical care.</div>
+      <div class="trust-strip"><span class="trust-pill">AI Coaching</span><span class="trust-pill">Progress Saved</span><span class="trust-pill">Delete Sessions Anytime</span></div>
     </div>
     <div class="hero-right">
       <div class="hero-chat-card">
@@ -328,22 +388,22 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
     </div>
   </section>
   <div class="hero-stats">
-    <div><div class="stat-num">3</div><div class="stat-label">Transformation Phases</div></div>
-    <div><div class="stat-num">6+</div><div class="stat-label">Practice Scenarios</div></div>
-    <div><div class="stat-num">AI</div><div class="stat-label">Powered Coaching</div></div>
-    <div><div class="stat-num">360°</div><div class="stat-label">Lifestyle Upgrade</div></div>
+    <div><div class="stat-num">6+</div><div class="stat-label">Live Practice Scenarios</div></div>
+    <div><div class="stat-num">24/7</div><div class="stat-label">AI Coaching Access</div></div>
+    <div><div class="stat-num">Saved</div><div class="stat-label">Session History</div></div>
+    <div><div class="stat-num">Full</div><div class="stat-label">Analysis and Progress Tracking</div></div>
   </div>
   <div class="gender-section">
     <div class="gender-card male">
       <div class="g-tag">For Men</div>
-      <h2>Build the Alpha<br>Within You</h2>
-      <p>From approaching confidently, to dressing sharp, to building a magnetic online presence — Confidy gives men the full toolkit to become who they know they can be.</p>
+      <h2>Build grounded,<br>modern confidence</h2>
+      <p>Practice calm, direct communication, sharpen your presence, and build real confidence that carries into dating, work, and everyday life.</p>
       <div class="gender-big-letter">M</div>
     </div>
     <div class="gender-card female">
       <div class="g-tag">For Women</div>
-      <h2>Radiate the Energy<br>You Deserve</h2>
-      <p>Master confident communication, curate your signature style, and craft a social media presence that turns heads — on your terms, in your voice.</p>
+      <h2>Own your voice<br>with confidence</h2>
+      <p>Build confident communication, social ease, and a stronger sense of presence — in your own style, on your own terms.</p>
       <div class="gender-big-letter">F</div>
     </div>
   </div>
@@ -394,17 +454,64 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
       </div>
     </div>
   </section>
-  <section class="cta-section">
+  <section class="focus-section">
+    <div class="focus-card">
+      <div>
+        <div class="section-eyebrow" style="justify-content:flex-start; margin-bottom:0.8rem;">What Is Live Today</div>
+        <h3>Phase 1 is focused, usable, and built for daily practice.</h3>
+        <p>Right now, Confidy is centered on AI confidence coaching for conversations you actually have in the real world. The upcoming style and social presence phases stay visible in the roadmap, but they are positioned as the next layers of the system rather than the current core product.</p>
+      </div>
+      <ul class="focus-list">
+        <li>Scenario-based coaching for approaches, texting, parties, workplace conversations, rejection recovery, and group dynamics.</li>
+        <li>Saved session history, dashboard progress, confidence score, skill snapshot, and full analysis.</li>
+        <li>Phase 2 will add style intelligence. Phase 3 will add social media presence guidance.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="legal-section">
+    <div class="section-header">
+      <div class="section-eyebrow">Trust and Clarity</div>
+      <h2>Built for growth, with clear boundaries.</h2>
+    </div>
+    <div class="legal-grid">
+      <div class="legal-card">
+        <h4>Privacy Policy</h4>
+        <p>Learn what profile information, progress metrics, and saved conversations are stored to power your dashboard and session history.</p>
+        <a href="#" onclick="openPolicy('privacy'); return false;">Read Privacy Policy</a>
+      </div>
+      <div class="legal-card">
+        <h4>Terms</h4>
+        <p>Clear product terms covering AI coaching use, account access, and what Confidy can and cannot guarantee.</p>
+        <a href="#" onclick="openPolicy('terms'); return false;">Read Terms</a>
+      </div>
+      <div class="legal-card">
+        <h4>Data Deletion</h4>
+        <p>You can delete saved sessions inside the dashboard, and request full account data deletion if you want everything removed.</p>
+        <a href="#" onclick="openPolicy('deletion'); return false;">View Deletion Options</a>
+      </div>
+    </div>
+  </section>
+
+<section class="cta-section">
     <h2>The Person You Want<br>to <em>Become</em><br>Is One Step Away</h2>
-    <p>Start with Phase 1 today — completely free. Your AI coach is ready and waiting.</p>
+    <p>Start with Phase 1 today and practice real-world conversations with AI coaching, progress tracking, and full analysis. Style and social presence layers are coming next.</p>
     <div class="cta-btns">
       <button class="btn-gold" onclick="show('auth')">Start My Journey Free</button>
     </div>
   </section>
   <footer class="footer">
-    <div class="footer-logo">CONFI<span>DY</span></div>
-    <p>Built to transform. Phase 1 live now.</p>
-    <p style="font-size:0.72rem;color:var(--muted)">© 2025 Confidy</p>
+    <div>
+      <div class="footer-logo">CONFI<span>DY</span></div>
+      <p>AI confidence coaching for real-world conversations. Phase 1 live now.</p>
+    </div>
+    <div class="footer-links">
+      <a href="#" onclick="openPolicy('privacy'); return false;">Privacy Policy</a>
+      <a href="#" onclick="openPolicy('terms'); return false;">Terms</a>
+      <a href="#" onclick="openPolicy('deletion'); return false;">Data Deletion</a>
+      <a href="#" onclick="openPolicy('coaching'); return false;">Coaching Notice</a>
+    </div>
+    <p style="font-size:0.72rem;color:var(--muted)">© 2026 Confidy</p>
   </footer>
 </div>
 
@@ -448,6 +555,7 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
           <div id="passwordStrength" style="font-size:0.8rem;color:#b8b8b8;margin-top:-0.35rem;">Strength: Enter a password</div>
         </div>
         <button class="auth-btn" onclick="handleSignup()">Create My Account</button>
+        <div class="auth-note">By creating an account, your profile details, progress metrics, selected scenario, and saved coaching sessions can be stored so you can resume later. You can delete saved sessions from your dashboard.</div>
         <div class="auth-error" id="signupError"></div>
         <div class="auth-success" id="signupSuccess"></div>
         <div class="auth-divider">or</div>
@@ -731,7 +839,106 @@ body { background: var(--dark); color: var(--cream); font-family: "DM Sans", san
   </div>
 </div>
 
+
+<div class="modal-overlay" id="policyModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-top">
+      <h3 id="policyTitle">Policy</h3>
+      <button class="modal-close" onclick="closePolicy()">Close</button>
+    </div>
+    <div id="policyBody"></div>
+  </div>
+</div>
+
 <script>
+
+const POLICY_CONTENT = {
+  privacy: {
+    title: "Privacy Policy",
+    body: `
+      <p>Confidy stores account details, selected scenarios, progress metrics, and saved sessions so you can continue your coaching journey across visits.</p>
+      <h4>What may be stored</h4>
+      <ul>
+        <li>Your account profile such as name, email, and selected preferences.</li>
+        <li>Confidence score, skill progress, scenario history, and recent session state.</li>
+        <li>Saved conversations and analysis data tied to your account.</li>
+      </ul>
+      <h4>How it is used</h4>
+      <ul>
+        <li>To restore sessions, show dashboard history, and track progress over time.</li>
+        <li>To generate coaching responses, scoring, and session analysis.</li>
+      </ul>
+      <h4>Your controls</h4>
+      <ul>
+        <li>You can delete saved sessions from the dashboard.</li>
+        <li>You can sign out at any time and request full account deletion through the data deletion flow.</li>
+      </ul>`
+  },
+  terms: {
+    title: "Terms of Use",
+    body: `
+      <p>Confidy provides AI-powered communication coaching for educational and self-improvement purposes.</p>
+      <h4>What Confidy is for</h4>
+      <ul>
+        <li>Practicing conversations, mindset reframes, and communication skills.</li>
+        <li>Reviewing progress, session history, and coaching feedback.</li>
+      </ul>
+      <h4>What Confidy is not</h4>
+      <ul>
+        <li>Not therapy, crisis support, medical advice, or emergency care.</li>
+        <li>Not a guarantee of personal, romantic, or professional outcomes.</li>
+      </ul>
+      <h4>Account responsibilities</h4>
+      <ul>
+        <li>Keep your login credentials secure.</li>
+        <li>Use the product lawfully and respectfully.</li>
+      </ul>`
+  },
+  deletion: {
+    title: "Data Deletion",
+    body: `
+      <p>Confidy gives you control over saved coaching data.</p>
+      <h4>Available options</h4>
+      <ul>
+        <li>Delete individual sessions from the dashboard.</li>
+        <li>Delete all saved sessions from the dashboard in one action.</li>
+        <li>For full account deletion, contact the site owner support email once added to production.</li>
+      </ul>
+      <h4>Recommended next step</h4>
+      <p>Add a dedicated support email such as support@confidy.app before production launch so this policy can point to a real deletion request channel.</p>`
+  },
+  coaching: {
+    title: "Coaching Notice",
+    body: `
+      <p>Confidy is a coaching product for communication growth and confidence practice.</p>
+      <ul>
+        <li>It is designed for roleplay, skill-building, and reflection.</li>
+        <li>It is not therapy, diagnosis, crisis response, or medical treatment.</li>
+        <li>If a user is in distress or needs urgent help, they should contact a licensed professional or emergency services in their area.</li>
+      </ul>`
+  }
+};
+
+function openPolicy(key) {
+  var entry = POLICY_CONTENT[key];
+  if (!entry) return;
+  var modal = document.getElementById('policyModal');
+  document.getElementById('policyTitle').textContent = entry.title;
+  document.getElementById('policyBody').innerHTML = entry.body;
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closePolicy() {
+  var modal = document.getElementById('policyModal');
+  modal.classList.remove('show');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePolicy();
+});
+
 // ── SUPABASE ──
 const SUPABASE_URL = "https://rogkdkdutzcidfjmrdwh.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvZ2tka2R1dHpjaWRmam1yZHdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1ODk0MzUsImV4cCI6MjA5MDE2NTQzNX0.LLL_I-4mLg7No3uuy9Rq3b4BdqQBTpxFrpkOc8HjGTE";
